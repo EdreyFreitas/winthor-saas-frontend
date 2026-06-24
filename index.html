@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Winthor SaaS - Supabase</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--nav-w:220px;--hdr-h:56px;--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--color-background-primary:#ffffff;--color-background-secondary:#f5f5f7;--color-background-tertiary:#f0f0f2;--color-border-secondary:#d1d1d6;--color-border-tertiary:#e5e5ea;--color-text-primary:#1c1c1e;--color-text-secondary:#636366;--color-text-tertiary:#8e8e93;--color-text-success:#2e7d32;--color-text-danger:#e24b4a;--color-text-warning:#ef9f27;--color-text-info:#3266ad;--color-background-success:#e8f5e9;--color-background-danger:#ffebee;--color-background-warning:#fff3e0;--color-background-info:#e3f2fd;--border-radius-md:6px;--border-radius-lg:8px}
+body{font-family:var(--font-sans);background:var(--color-background-tertiary);color:var(--color-text-primary);height:100vh;overflow:hidden}
+.login-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#3ecf8e 0%,#1c7d4e 100%)}
+.login-card{background:#fff;border-radius:var(--border-radius-lg);padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.login-title{font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;text-align:center}
+.login-sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:24px;text-align:center}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:12px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:500}
+.login-field input{width:100%;padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:14px;font-family:var(--font-sans);transition:border-color .15s}
+.login-field input:focus{outline:none;border-color:#3ecf8e}
+.login-btn{width:100%;padding:12px;border-radius:var(--border-radius-md);font-size:15px;font-weight:600;cursor:pointer;border:none;background:#3ecf8e;color:#fff;margin-top:8px;transition:background .15s}
+.login-btn:hover{background:#2eb87a}
+.login-error{color:var(--color-text-danger);font-size:12px;margin-top:8px;text-align:center}
+.login-link{color:#3ecf8e;text-decoration:none;font-weight:500}
+.login-link:hover{text-decoration:underline}
+#crm-root{display:flex;height:100vh;min-height:600px;overflow:hidden}
+#sidebar{width:var(--nav-w);background:var(--color-background-primary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-brand{padding:16px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.brand-title{font-size:15px;font-weight:700;color:var(--color-text-primary)}
+.brand-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.sidebar-section{padding:8px 0}
+.sidebar-label{font-size:10px;font-weight:700;color:var(--color-text-tertiary);padding:4px 16px 2px;text-transform:uppercase;letter-spacing:.06em}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;font-size:13px;color:var(--color-text-secondary);border-left:2px solid transparent;transition:all .15s}
+.nav-item:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.nav-item.active{background:var(--color-background-secondary);color:var(--color-text-primary);border-left-color:#3ecf8e}
+.nav-item i{font-size:16px;width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--color-background-danger);color:var(--color-text-danger);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:var(--hdr-h);background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--color-text-primary);flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:12px;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-primary);transition:all .15s;font-family:var(--font-sans)}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:#3ecf8e;color:#fff;border-color:#3ecf8e}
+.btn-primary:hover{background:#2eb87a}
+.btn-success{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.btn-success:hover{background:#1b5e20}
+#content{flex:1;overflow-y:auto;padding:20px}
+.page{display:none}
+.page.active{display:block}
+.section-title{font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px}
+.metric-label{font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px}
+.metric-value{font-size:24px;font-weight:700;color:var(--color-text-primary)}
+.metric-sub{font-size:11px;color:var(--color-text-secondary);margin-top:4px}
+.metric-dn{color:var(--color-text-danger)}
+.metric-up{color:var(--color-text-success)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;font-weight:700;color:var(--color-text-tertiary);padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase;letter-spacing:.04em}
+td{padding:9px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--color-background-secondary)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-success{background:var(--color-background-success);color:var(--color-text-success)}
+.badge-warning{background:var(--color-background-warning);color:var(--color-text-warning)}
+.badge-danger{background:var(--color-background-danger);color:var(--color-text-danger)}
+.badge-info{background:var(--color-background-info);color:var(--color-text-info)}
+.badge-gray{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.search-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-bar input,.search-bar select{flex:1;min-width:140px;padding:7px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);font-family:var(--font-sans)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--color-text-secondary)}
+.empty-state i{font-size:32px;display:block;margin-bottom:10px;color:var(--color-text-tertiary)}
+.alert-row td{background:rgba(228,45,45,.04)}
+.score-bar{height:6px;border-radius:3px;background:var(--color-background-secondary);overflow:hidden;width:80px;display:inline-block;vertical-align:middle}
+.score-fill{height:100%;border-radius:3px;background:#3ecf8e}
+.score-fill.high{background:#2e7d32}.score-fill.med{background:#ef9f27}.score-fill.low{background:#e24b4a}
+.api-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary)}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot-ok{background:#2e7d32}.dot-err{background:#e24b4a}.dot-idle{background:var(--color-text-tertiary)}
+.user-menu{display:flex;align-items:center;gap:8px;margin-left:auto}
+.user-name{font-size:12px;color:var(--color-text-secondary);font-weight:500}
+.export-card{margin-top:16px}
+.export-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.export-item:last-child{border-bottom:none}
+.sync-status{padding:8px 12px;border-radius:var(--border-radius-md);font-size:12px;margin-bottom:16px}
+.sync-status.ok{background:var(--color-background-success);color:var(--color-text-success)}
+.sync-status.warn{background:var(--color-background-warning);color:var(--color-text-warning)}
+.sync-status.err{background:var(--color-background-danger);color:var(--color-text-danger)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-title">Winthor SaaS</div>
+    <div class="login-sub">Conectado ao </div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="login-password" placeholder="Sua senha" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="btn-login">Entrar</button>
+    <div class="login-error" id="login-error"></div>
+    <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--color-text-tertiary)">
+      Nao tem conta? <a href="#" id="link-register" class="login-link">Cadastre-se</a>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div id="register-screen" class="login-screen" style="display:none">
+  <div class="login-card">
+    <div class="login-title">Criar Conta</div>
+    <div class="login-sub">Comece a usar o Winthor SaaS</div>
+    <div class="login-field">
+      <label>Nome</label>
+      <input type="text" id="reg-name" placeholder="Seu nome">
+    </div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="reg-password" placeholder="Minimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <button class="login-btn" id="btn-register">Cadastrar</button>
+    <div class="login-error" id="reg-error"></div>
+    <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--color-text-tertiary)">
+      Ja tem conta? <a href="#" id="link-login" class="login-link">Entrar</a>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+<div id="crm-root">
+<div id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-title">Winthor SaaS</div>
+    <div class="brand-sub" id="conn-status">Supabase</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Principal</div>
+    <div class="nav-item active" data-page="dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+    <div class="nav-item" data-page="clientes"><i class="ti ti-users"></i> Clientes <span class="nav-badge" id="badge-inat" style="display:none">!</span></div>
+    <div class="nav-item" data-page="pedidos"><i class="ti ti-file-invoice"></i> Pedidos</div>
+    <div class="nav-item" data-page="produtos"><i class="ti ti-package"></i> Produtos</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Inteligencia</div>
+    <div class="nav-item" data-page="predicoes"><i class="ti ti-brain"></i> Predicoes</div>
+    <div class="nav-item" data-page="funil"><i class="ti ti-filter"></i> Funil</div>
+    <div class="nav-item" data-page="atendimento"><i class="ti ti-headset"></i> Atendimento</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Sistema</div>
+    <div class="nav-item" data-page="exportar"><i class="ti ti-download"></i> Exportar</div>
+    <div class="nav-item" data-page="config"><i class="ti ti-settings"></i> Configuracoes</div>
+  </div>
+</div>
+
+<div id="main">
+<div id="topbar">
+  <span class="topbar-title" id="page-title">Dashboard</span>
+  <div class="api-status"><div class="dot dot-idle" id="api-dot"></div><span id="api-label">Conectando...</span></div>
+  <div class="user-menu">
+    <span class="user-name" id="user-name"></span>
+    <button class="btn" id="btn-logout"><i class="ti ti-logout"></i> Sair</button>
+  </div>
+</div>
+
+<div id="content">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div id="sync-status" class="sync-status ok" style="display:none"></div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Total clientes</div><div class="metric-value" id="m-cli">-</div></div>
+    <div class="metric"><div class="metric-label">Inativos +15 dias</div><div class="metric-value metric-dn" id="m-inat">-</div></div>
+    <div class="metric"><div class="metric-label">Pedidos (30d)</div><div class="metric-value" id="m-ped">-</div></div>
+    <div class="metric"><div class="metric-label">Faturamento</div><div class="metric-value" id="m-fat">-</div></div>
+    <div class="metric"><div class="metric-label">Ticket medio</div><div class="metric-value" id="m-tick">-</div></div>
+    <div class="metric"><div class="metric-label">Alta propensao</div><div class="metric-value metric-up" id="m-oport">-</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="section-title">Vendas por data</div><div style="position:relative;height:180px"><canvas id="chart-vendas">Carregando...</canvas></div></div>
+    <div class="card"><div class="section-title">Clientes em risco</div><div id="clientes-risco-list"><div class="empty-state"><i class="ti ti-clock"></i><p>Carregando...</p></div></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="section-title">Top 5 - melhores clientes</div><div id="top-cli-list"><div class="empty-state"><i class="ti ti-star"></i><p>Carregando...</p></div></div></div>
+    <div class="card"><div class="section-title">Atividades recentes</div><div id="atividades-dash"><div class="empty-state"><i class="ti ti-activity"></i><p>Carregando...</p></div></div></div>
+  </div>
+</div>
+
+<!-- CLIENTES -->
+<div class="page" id="page-clientes">
+  <div class="search-bar">
+    <input type="text" id="cli-search" placeholder="Buscar por nome, CNPJ ou cidade...">
+    <select id="cli-filter"><option value="all">Todos</option><option value="inactive">Inativos +15 dias</option><option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option></select>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table><thead><tr><th>Cliente</th><th>CNPJ</th><th>Cidade</th><th>Score</th><th>Segmento</th><th>Ultima compra</th></tr></thead>
+    <tbody id="cli-tbody"><tr><td colspan="6"><div class="empty-state"><i class="ti ti-users"></i><p>Carregando...</p></div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- PEDIDOS -->
+<div class="page" id="page-pedidos">
+  <div class="search-bar">
+    <input type="text" id="ped-search" placeholder="Numero do pedido ou cliente...">
+    <select id="ped-status"><option value="">Todos</option><option value="C">Confirmado</option><option value="L">Liberado</option><option value="F">Faturado</option></select>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody id="ped-tbody"><tr><td colspan="5"><div class="empty-state"><i class="ti ti-file-invoice"></i><p>Carregando...</p></div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- PRODUTOS -->
+<div class="page" id="page-produtos">
+  <div class="search-bar">
+    <input type="text" id="prod-search" placeholder="Nome ou codigo...">
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table><thead><tr><th>Cod.</th><th>Nome</th><th>Categoria</th><th>Fornecedor</th><th>Status</th></tr></thead>
+    <tbody id="prod-tbody"><tr><td colspan="5"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- PREDICOES -->
+<div class="page" id="page-predicoes">
+  <div class="metric-grid" style="margin-bottom:20px">
+    <div class="metric"><div class="metric-label">Alta propensao</div><div class="metric-value metric-up" id="pred-high">-</div></div>
+    <div class="metric"><div class="metric-label">Media propensao</div><div class="metric-value" id="pred-med">-</div></div>
+    <div class="metric"><div class="metric-label">Em risco</div><div class="metric-value metric-dn" id="pred-risk">-</div></div>
+    <div class="metric"><div class="metric-label">Upsell</div><div class="metric-value" id="pred-opp">-</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="section-title">Maior probabilidade de compra</div><div id="pred-list"><div class="empty-state"><i class="ti ti-brain"></i><p>Carregue dados</p></div></div></div>
+    <div class="card"><div class="section-title">Produtos mais vendidos</div><div id="prod-rec-list"><div class="empty-state"><i class="ti ti-sparkles"></i><p>Dados insuficientes</p></div></div></div>
+  </div>
+</div>
+
+<!-- FUNIL -->
+<div class="page" id="page-funil">
+  <div class="grid-2">
+    <div class="card"><div class="section-title">Funil de oportunidades</div><div id="funil-content"><div class="empty-state"><i class="ti ti-filter"></i><p>Carregue dados</p></div></div></div>
+    <div class="card"><div class="section-title">Distribuicao</div><div style="position:relative;height:220px"><canvas id="chart-funil">Carregando...</canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:0">
+    <div class="section-title">Lista do funil</div>
+    <table><thead><tr><th>Cliente</th><th>Segmento</th><th>Dias sem compra</th><th>Score</th><th>Recomendacao</th></tr></thead>
+    <tbody id="funil-tbody"><tr><td colspan="5"><div class="empty-state"><i class="ti ti-filter"></i><p>Sem dados</p></div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- ATENDIMENTO -->
+<div class="page" id="page-atendimento">
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Hoje</div><div class="metric-value" id="at-hoje">0</div></div>
+    <div class="metric"><div class="metric-label">Semana</div><div class="metric-value" id="at-semana">0</div></div>
+    <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="at-conc">0</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title" style="margin-bottom:12px">Registrar atendimento</div>
+      <label class="field-label">Cliente</label><input type="text" class="field-input" id="at-cliente" placeholder="Nome do cliente...">
+      <label class="field-label">Tipo</label>
+      <select class="field-input" id="at-tipo"><option>Ligacao</option><option>Visita</option><option>E-mail</option><option>WhatsApp</option><option>Outro</option></select>
+      <label class="field-label">Observacao</label><textarea class="note-input" id="at-obs" placeholder="Descreva..."></textarea>
+      <button class="btn btn-primary" style="margin-top:10px;width:100%" id="btn-reg-at"><i class="ti ti-check"></i> Registrar</button>
+    </div>
+    <div class="card"><div class="section-title">Historico</div><div id="at-hist-list"><div class="empty-state"><i class="ti ti-headset"></i><p>Nenhum atendimento</p></div></div></div>
+  </div>
+</div>
+
+<!-- EXPORTAR -->
+<div class="page" id="page-exportar">
+  <div class="card">
+    <div class="section-title">Exportacao de Dados</div>
+    <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 16px">Gere relatorios Excel com dados do Winthor.</p>
+    <button class="btn btn-success" id="btn-export-now" style="margin-bottom:16px"><i class="ti ti-file-spreadsheet"></i> Exportar Agora</button>
+    <div id="export-status" style="display:none;margin-bottom:16px;padding:10px 12px;border-radius:var(--border-radius-md);font-size:13px"></div>
+  </div>
+  <div class="card export-card">
+    <div class="section-title">Historico de Exportacoes</div>
+    <div id="export-list"><div class="empty-state"><i class="ti ti-download"></i><p>Nenhuma exportacao ainda</p></div></div>
+  </div>
+</div>
+
+<!-- CONFIGURACOES -->
+<div class="page" id="page-config">
+  <div style="max-width:520px">
+    <div class="card">
+      <div class="section-title">Status do Sistema</div>
+      <div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px"><span style="color:var(--color-text-secondary)">Supabase</span><span id="info-supabase">Conectado</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px"><span style="color:var(--color-text-secondary)">Ultima sync</span><span id="info-sync">-</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:var(--color-text-secondary)">Usuario</span><span id="info-user">-</span></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="section-title">Forcar Sincronizacao</div>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 16px">Execute manualmente a sincronizacao com o Winthor.</p>
+      <button class="btn btn-primary" id="btn-force-sync"><i class="ti ti-refresh"></i> Sincronizar Agora</button>
+      <div id="sync-result" style="margin-top:12px;font-size:13px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+
+// ============================================================
+// CONFIGURACAO - SUBSTITUA COM SEUS DADOS DO SUPABASE
+// ============================================================
+const SUPABASE_URL = 'https://supabase.com/dashboard/project/xtwouhmdzliqmztzbgwl'  // <-- SUBSTITUA
+const SUPABASE_KEY = 'sb_publishable_KXMNxaGGZDctvLY3aS8wnw_3zU5k7nX'       // <-- SUBSTITUA
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ============================================================
+// ESTADO
+// ============================================================
+const S = {
+  user: null,
+  empresa: null,
+  clientes: [],
+  pedidos: [],
+  produtos: [],
+  atendimentos: [],
+  subscriptions: []
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+function showLogin() { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('register-screen').style.display = 'none'; document.getElementById('app').style.display = 'none'; }
+function showRegister() { document.getElementById('login-screen').style.display = 'none'; document.getElementById('register-screen').style.display = 'flex'; document.getElementById('app').style.display = 'none'; }
+function showApp() { document.getElementById('login-screen').style.display = 'none'; document.getElementById('register-screen').style.display = 'none'; document.getElementById('app').style.display = 'block'; document.getElementById('user-name').textContent = S.user?.nome || ''; loadAllData(); setupRealtime(); }
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim()
+  const password = document.getElementById('login-password').value
+  document.getElementById('login-error').textContent = ''
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+    S.user = data.user
+    await loadPerfil()
+    showApp()
+  } catch (e) { document.getElementById('login-error').textContent = e.message }
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim()
+  const email = document.getElementById('reg-email').value.trim()
+  const password = document.getElementById('reg-password').value
+  document.getElementById('reg-error').textContent = ''
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { nome: name } } })
+    if (error) throw error
+    showLogin()
+    document.getElementById('login-error').textContent = 'Conta criada! Verifique seu email.'
+  } catch (e) { document.getElementById('reg-error').textContent = e.message }
+}
+
+async function doLogout() {
+  await supabase.auth.signOut()
+  S.user = null; S.empresa = null
+  S.subscriptions.forEach(sub => sub.unsubscribe())
+  S.subscriptions = []
+  showLogin()
+}
+
+async function loadPerfil() {
+  const { data, error } = await supabase.from('perfis').select('*, empresa:empresa_id(*)').eq('id', S.user.id).single()
+  if (data) { S.user = { ...S.user, ...data }; S.empresa = data.empresa; }
+}
+
+// Verificar sessao ao carregar
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) { S.user = session.user; loadPerfil().then(() => showApp()); }
+  else if (event === 'SIGNED_OUT') { showLogin(); }
+})
+
+// ============================================================
+// NAVEGACAO
+// ============================================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  const pg = document.getElementById('page-' + id); if (pg) pg.classList.add('active')
+  const nav = document.querySelector('[data-page="' + id + '"]'); if (nav) nav.classList.add('active')
+  const titles = { dashboard: 'Dashboard', clientes: 'Clientes', pedidos: 'Pedidos', produtos: 'Produtos', predicoes: 'Predicoes', funil: 'Funil', atendimento: 'Atendimento', exportar: 'Exportar', config: 'Configuracoes' }
+  document.getElementById('page-title').textContent = titles[id] || id
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(el => { el.addEventListener('click', () => showPage(el.dataset.page)) })
+
+// ============================================================
+// DADOS - CARREGAR DO SUPABASE
+// ============================================================
+async function loadAllData() {
+  if (!S.empresa) return
+  loadClientes(); loadPedidos(); loadProdutos(); loadAtendimentos(); loadSyncStatus(); loadDashboard()
+}
+
+async function loadClientes() {
+  const { data, error } = await supabase.from('clientes').select('*').eq('empresa_id', S.empresa.id).order('score', { ascending: false })
+  if (error) { console.error(error); return }
+  S.clientes = data || []
+  renderClientes()
+  updateDashMetrics()
+}
+
+async function loadPedidos() {
+  const { data, error } = await supabase.from('pedidos').select('*').eq('empresa_id', S.empresa.id).order('data', { ascending: false }).limit(100)
+  if (error) { console.error(error); return }
+  S.pedidos = data || []
+  renderPedidos()
+  updateDashMetrics()
+}
+
+async function loadProdutos() {
+  const { data, error } = await supabase.from('produtos').select('*').eq('empresa_id', S.empresa.id).order('quantidade_vendida', { ascending: false })
+  if (error) { console.error(error); return }
+  S.produtos = data || []
+  renderProdutos()
+}
+
+async function loadAtendimentos() {
+  const { data, error } = await supabase.from('atendimentos').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending: false }).limit(50)
+  if (error) { console.error(error); return }
+  S.atendimentos = data || []
+  renderAtendimentos()
+}
+
+async function loadSyncStatus() {
+  const { data, error } = await supabase.from('log_sync').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending: false }).limit(1).single()
+  if (data) {
+    const el = document.getElementById('sync-status')
+    el.style.display = 'block'
+    el.className = 'sync-status ' + (data.status === 'sucesso' ? 'ok' : data.status === 'parcial' ? 'warn' : 'err')
+    el.textContent = 'Ultima sync: ' + new Date(data.created_at).toLocaleString('pt-BR') + ' - ' + data.status + (data.clientes_novos ? ' (' + data.clientes_novos + ' clientes novos)' : '')
+    document.getElementById('info-sync').textContent = new Date(data.created_at).toLocaleString('pt-BR')
+  }
+}
+
+async function loadDashboard() {
+  const { data, error } = await supabase.from('v_dashboard').select('*').eq('empresa_id', S.empresa.id).single()
+  if (data) {
+    document.getElementById('m-cli').textContent = data.total_clientes || '0'
+    document.getElementById('m-inat').textContent = data.clientes_inativos || '0'
+    document.getElementById('m-ped').textContent = data.total_pedidos || '0'
+    document.getElementById('m-fat').textContent = data.faturamento_total > 0 ? 'R$ ' + Math.round(data.faturamento_total / 1000) + 'k' : 'R$ 0'
+    document.getElementById('m-tick').textContent = data.ticket_medio > 0 ? 'R$ ' + Math.round(data.ticket_medio).toLocaleString('pt-BR') : 'R$ 0'
+    document.getElementById('m-oport').textContent = data.clientes_hot || '0'
+  }
+}
+
+// ============================================================
+// REALTIME - ATUALIZACOES AO VIVO
+// ============================================================
+function setupRealtime() {
+  if (!S.empresa) return
+
+  // Clientes em tempo real
+  const clientesSub = supabase.channel('clientes-' + S.empresa.id)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes', filter: 'empresa_id=eq.' + S.empresa.id }, (payload) => {
+      console.log('Cliente atualizado:', payload)
+      loadClientes()
+    })
+    .subscribe()
+  S.subscriptions.push(clientesSub)
+
+  // Pedidos em tempo real
+  const pedidosSub = supabase.channel('pedidos-' + S.empresa.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos', filter: 'empresa_id=eq.' + S.empresa.id }, (payload) => {
+      console.log('Novo pedido:', payload)
+      loadPedidos()
+    })
+    .subscribe()
+  S.subscriptions.push(pedidosSub)
+}
+
+// ============================================================
+// RENDERIZACAO
+// ============================================================
+const fmtMoney = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmtDate = s => { if (!s) return '-'; try { return new Date(s).toLocaleDateString('pt-BR') } catch (e) { return s } }
+const initials = n => { if (!n) return '?'; const p = n.trim().split(' '); return (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() }
+
+function renderClientes() {
+  const search = document.getElementById('cli-search').value.toLowerCase()
+  const filter = document.getElementById('cli-filter').value
+  const list = S.clientes.filter(c => {
+    if (search && !(c.nome || '').toLowerCase().includes(search) && !(c.cnpj || '').includes(search) && !(c.cidade || '').toLowerCase().includes(search)) return false
+    if (filter === 'inactive') return c.dias_sem_compra > 15
+    if (filter === 'hot') return c.segmento === 'hot'
+    if (filter === 'warm') return c.segmento === 'warm'
+    if (filter === 'cold') return c.segmento === 'cold'
+    return true
+  })
+  const inat = S.clientes.filter(c => c.dias_sem_compra > 15).length
+  const badge = document.getElementById('badge-inat'); badge.style.display = inat > 0 ? '' : 'none'; badge.textContent = inat
+  const tb = document.getElementById('cli-tbody')
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhum cliente</p></div></td></tr>'; return }
+  tb.innerHTML = list.slice(0, 100).map(c => {
+    const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low'
+    return '<tr><td><div style="font-weight:500">' + (c.nome || '-') + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + (c.cidade || '') + '</div></td><td style="font-size:12px">' + (c.cnpj || '-') + '</td><td style="font-size:12px">' + (c.cidade || '-') + '</td><td><div class="score-bar"><div class="' + cl + '" style="width:' + (c.score || 0) + '%"></div></div> ' + (c.score || 0) + '</td><td><span class="badge ' + (c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info') + '">' + (c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold') + '</span></td><td style="font-size:12px">' + (c.dias_sem_compra ? c.dias_sem_compra + ' dias' : '-') + '</td></tr>'
+  }).join('')
+}
+
+function renderPedidos() {
+  const search = document.getElementById('ped-search').value.toLowerCase()
+  const status = document.getElementById('ped-status').value
+  const list = S.pedidos.filter(p => {
+    if (search && !String(p.id).includes(search) && !(p.cliente_nome || '').toLowerCase().includes(search)) return false
+    if (status && p.status !== status) return false
+    return true
+  })
+  const tb = document.getElementById('ped-tbody')
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Nenhum pedido</p></div></td></tr>'; return }
+  tb.innerHTML = list.slice(0, 100).map(p => {
+    const statusMap = { C: 'badge-success', L: 'badge-info', F: 'badge-warning' }
+    return '<tr><td style="font-weight:500">#' + (p.id || '-') + '</td><td style="font-size:12px">' + (p.cliente_nome || '-') + '</td><td style="font-size:12px">' + fmtDate(p.data) + '</td><td style="font-size:12px">' + fmtMoney(p.total) + '</td><td><span class="badge ' + (statusMap[p.status] || 'badge-gray') + '">' + (p.status || '-') + '</span></td></tr>'
+  }).join('')
+}
+
+function renderProdutos() {
+  const search = document.getElementById('prod-search').value.toLowerCase()
+  const list = S.produtos.filter(p => !search || (p.nome || '').toLowerCase().includes(search) || String(p.id).includes(search))
+  const tb = document.getElementById('prod-tbody')
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Sem produtos</p></div></td></tr>'; return }
+  tb.innerHTML = list.slice(0, 100).map(p => '<tr><td style="font-size:12px">' + p.id + '</td><td><div style="font-weight:500;font-size:13px">' + (p.nome || '-') + '</div></td><td style="font-size:12px">' + (p.categoria_nome || '-') + '</td><td style="font-size:12px">' + (p.fornecedor || '-') + '</td><td>' + (p.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>') + '</td></tr>').join('')
+}
+
+function renderAtendimentos() {
+  const hoje = new Date().toDateString()
+  const semana = Date.now() - 604800000
+  document.getElementById('at-hoje').textContent = S.atendimentos.filter(a => new Date(a.created_at).toDateString() === hoje).length
+  document.getElementById('at-semana').textContent = S.atendimentos.filter(a => new Date(a.created_at).getTime() > semana).length
+  document.getElementById('at-conc').textContent = S.atendimentos.length
+  document.getElementById('at-hist-list').innerHTML = S.atendimentos.length ? S.atendimentos.slice(0, 20).map(a => '<div class="note-item"><div class="note-meta">' + a.tipo + ' - ' + a.cliente_nome + ' - ' + new Date(a.created_at).toLocaleString('pt-BR') + '</div>' + (a.observacao || 'Sem observacao') + '</div>').join('') : '<div class="empty-state"><i class="ti ti-headset"></i><p>Nenhum atendimento</p></div>'
+  document.getElementById('atividades-dash').innerHTML = S.atendimentos.length ? S.atendimentos.slice(0, 4).map(a => '<div style="padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:13px;font-weight:500">' + a.cliente_nome + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + a.tipo + ' - ' + new Date(a.created_at).toLocaleString('pt-BR') + '</div></div>').join('') : '<div class="empty-state"><i class="ti ti-activity"></i><p>Nenhuma atividade</p></div>'
+}
+
+function updateDashMetrics() {
+  const risco = S.clientes.filter(c => c.dias_sem_compra > 15).slice(0, 5)
+  document.getElementById('clientes-risco-list').innerHTML = risco.length ? risco.map(c => '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="width:30px;height:30px;border-radius:50%;background:var(--color-background-danger);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-text-danger);flex-shrink:0">' + initials(c.nome) + '</div><div style="flex:1"><div style="font-size:13px">' + (c.nome || '-') + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + (c.dias_sem_compra || '?') + ' dias sem compra</div></div><span class="badge badge-danger">Contatar</span></div>').join('') : '<div class="empty-state"><i class="ti ti-check"></i><p>Nenhum em risco</p></div>'
+
+  const topCli = S.clientes.slice().sort((a, b) => (b.valor_total_compras || 0) - (a.valor_total_compras || 0)).slice(0, 5)
+  document.getElementById('top-cli-list').innerHTML = topCli.length ? topCli.map((c, i) => '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:13px;font-weight:500;color:var(--color-text-tertiary);width:16px">' + (i + 1) + '</div><div style="flex:1;font-size:13px">' + (c.nome || '-') + '</div><div style="font-size:12px;font-weight:500">' + fmtMoney(c.valor_total_compras) + '</div></div>').join('') : '<div class="empty-state"><i class="ti ti-star"></i><p>Carregue dados</p></div>'
+
+  const ctx = document.getElementById('chart-vendas')
+  if (ctx && S.pedidos.length) {
+    const byDay = {}; S.pedidos.forEach(p => { const d = fmtDate(p.data); byDay[d] = (byDay[d] || 0) + parseFloat(p.total || 0) })
+    const labels = Object.keys(byDay).sort().slice(-10)
+    new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Faturamento', data: labels.map(l => Math.round(byDay[l])), backgroundColor: '#3ecf8e', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { callback: v => 'R$' + Math.round(v / 1000) + 'k', font: { size: 10 } } } } } })
+  }
+
+  // Predicoes
+  const hot = S.clientes.filter(c => c.segmento === 'hot').length
+  const warm = S.clientes.filter(c => c.segmento === 'warm').length
+  const cold = S.clientes.filter(c => c.segmento === 'cold').length
+  document.getElementById('pred-high').textContent = hot
+  document.getElementById('pred-med').textContent = warm
+  document.getElementById('pred-risk').textContent = cold
+  document.getElementById('pred-opp').textContent = S.clientes.filter(c => c.score > 60 && c.quantidade_pedidos > 2).length
+
+  document.getElementById('pred-list').innerHTML = S.clientes.slice(0, 8).map(c => { const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low'; return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="width:32px;height:32px;border-radius:50%;background:var(--color-background-info);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-text-info);flex-shrink:0">' + initials(c.nome) + '</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (c.nome || '-') + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + (c.quantidade_pedidos || 0) + ' pedidos - R$ ' + Math.round(c.valor_total_compras || 0).toLocaleString('pt-BR') + '</div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:13px;font-weight:500">' + (c.score || 0) + '</div><div class="score-bar"><div class="' + cl + '" style="width:' + (c.score || 0) + '%"></div></div></div></div>'; }).join('')
+
+  // Funil
+  const total = S.clientes.length || 1
+  document.getElementById('funil-content').innerHTML = [{ cls: 'fs-hot', l: 'Quentes - compra iminente', list: hot }, { cls: 'fs-warm', l: 'Mornos - dentro do ciclo', list: warm }, { cls: 'fs-cold', l: 'Frios - reengajamento', list: cold }].map(item => '<div class="funnel-stage ' + item.cls + '"><div style="font-size:12px;font-weight:500">' + item.l + '</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">' + item.list + ' clientes</div><div class="progress"><div class="progress-fill" style="width:' + Math.round(item.list / total * 100) + '%"></div></div></div>').join('')
+  document.getElementById('funil-tbody').innerHTML = S.clientes.slice(0, 30).map(c => '<tr><td style="font-size:13px">' + (c.nome || '-') + '</td><td><span class="badge ' + (c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info') + '">' + (c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold') + '</span></td><td style="font-size:12px">' + (c.dias_sem_compra !== null ? c.dias_sem_compra + ' dias' : '-') + '</td><td><div class="score-bar"><div class="score-fill ' + (c.segmento === 'hot' ? 'high' : c.segmento === 'warm' ? 'med' : 'low') + '" style="width:' + (c.score || 0) + '%"></div></div> ' + (c.score || 0) + '</td><td style="font-size:12px">' + (c.segmento === 'hot' ? 'Contatar agora' : c.segmento === 'warm' ? 'Acompanhar' : 'Reengajar') + '</td></tr>').join('')
+
+  const fctx = document.getElementById('chart-funil')
+  if (fctx) { new Chart(fctx, { type: 'doughnut', data: { labels: ['Quentes', 'Mornos', 'Frios'], datasets: [{ data: [hot, warm, cold], backgroundColor: ['#e24b4a', '#ef9f27', '#3ecf8e'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }) }
+
+  // Produtos recomendados
+  const prodMap = {}
+  S.pedidos.forEach(p => { (p.itens || []).forEach(it => { prodMap[it.productId] = (prodMap[it.productId] || 0) + parseFloat(it.quantity || 1) }) })
+  const topProd = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  document.getElementById('prod-rec-list').innerHTML = topProd.length ? topProd.map(([id, qty]) => { const p = S.produtos.find(x => String(x.id) === String(id)); return '<div style="padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:13px;font-weight:500">' + (p ? p.nome : 'Produto ' + id) + '</div><div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">' + Math.round(qty) + ' unid. vendidas</div></div>'; }).join('') : '<div class="empty-state"><p>Sem dados</p></div>'
+}
+
+// ============================================================
+// ACAO: REGISTRAR ATENDIMENTO
+// ============================================================
+document.getElementById('btn-reg-at').addEventListener('click', async () => {
+  const cliente = document.getElementById('at-cliente').value.trim()
+  const tipo = document.getElementById('at-tipo').value
+  const observacao = document.getElementById('at-obs').value.trim()
+  if (!cliente) return
+  const { error } = await supabase.from('atendimentos').insert({ empresa_id: S.empresa.id, cliente_nome: cliente, tipo, observacao })
+  if (error) { alert('Erro: ' + error.message); return }
+  document.getElementById('at-cliente').value = ''; document.getElementById('at-obs').value = ''
+  loadAtendimentos()
+})
+
+// ============================================================
+// ACAO: EXPORTAR
+// ============================================================
+document.getElementById('btn-export-now').addEventListener('click', async () => {
+  const status = document.getElementById('export-status')
+  status.style.display = 'block'; status.style.background = 'var(--color-background-info)'; status.style.color = 'var(--color-text-info)'; status.innerHTML = 'Gerando...'
+  try {
+    const { data, error } = await supabase.from('exportacoes').insert({ empresa_id: S.empresa.id, tipo: 'completo', status: 'pendente' }).select().single()
+    if (error) throw error
+    // Chamar Edge Function para gerar o arquivo
+    const { data: result, error: fnError } = await supabase.functions.invoke('winthor-export', { body: { exportacao_id: data.id } })
+    if (fnError) throw fnError
+    status.style.background = 'var(--color-background-success)'; status.style.color = 'var(--color-text-success)'; status.innerHTML = 'Concluido! <a href="' + result.url + '" style="color:inherit;font-weight:600">Baixar</a>'
+    loadExports()
+  } catch (e) { status.style.background = 'var(--color-background-danger)'; status.style.color = 'var(--color-text-danger)'; status.textContent = 'Erro: ' + e.message }
+})
+
+async function loadExports() {
+  const { data, error } = await supabase.from('exportacoes').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending: false }).limit(20)
+  if (error) return
+  document.getElementById('export-list').innerHTML = data.length ? data.map(item => '<div class="export-item"><span style="font-size:13px">' + item.tipo + ' - ' + new Date(item.created_at).toLocaleString('pt-BR') + '</span>' + (item.url_download ? '<a href="' + item.url_download + '" class="btn" style="padding:4px 10px;font-size:11px"><i class="ti ti-download"></i> Baixar</a>' : '<span class="badge ' + (item.status === 'concluido' ? 'badge-success' : item.status === 'erro' ? 'badge-danger' : 'badge-warning') + '">' + item.status + '</span>') + '</div>').join('') : '<div class="empty-state"><p>Nenhuma exportacao</p></div>'
+}
+
+// ============================================================
+// ACAO: FORCAR SYNC
+// ============================================================
+document.getElementById('btn-force-sync').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-force-sync')
+  const result = document.getElementById('sync-result')
+  btn.disabled = true; btn.textContent = 'Sincronizando...'
+  result.style.display = 'none'
+  try {
+    const { data, error } = await supabase.functions.invoke('winthor-sync')
+    if (error) throw error
+    result.style.display = 'block'; result.style.color = 'var(--color-text-success)'; result.textContent = 'Sync iniciada! Aguarde alguns minutos.'
+    setTimeout(loadSyncStatus, 30000)
+  } catch (e) { result.style.display = 'block'; result.style.color = 'var(--color-text-danger)'; result.textContent = 'Erro: ' + e.message }
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-refresh"></i> Sincronizar Agora'
+})
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+document.getElementById('btn-login').addEventListener('click', doLogin)
+document.getElementById('btn-register').addEventListener('click', doRegister)
+document.getElementById('btn-logout').addEventListener('click', doLogout)
+document.getElementById('link-register').addEventListener('click', (e) => { e.preventDefault(); showRegister() })
+document.getElementById('link-login').addEventListener('click', (e) => { e.preventDefault(); showLogin() })
+document.getElementById('cli-search').addEventListener('input', renderClientes)
+document.getElementById('cli-filter').addEventListener('change', renderClientes)
+document.getElementById('ped-search').addEventListener('input', renderPedidos)
+document.getElementById('ped-status').addEventListener('change', renderPedidos)
+document.getElementById('prod-search').addEventListener('input', renderProdutos)
+
+// Verificar sessao existente
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session) { S.user = session.user; loadPerfil().then(() => showApp()) }
+  else { showLogin() }
+})
+</script>
+</body>
+</html>
