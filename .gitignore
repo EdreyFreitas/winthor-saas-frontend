@@ -1,0 +1,14 @@
+# Segredos - nunca subir para o GitHub
+.env
+.env.local
+.env.production
+
+# Executáveis locais
+*.exe
+
+# Supabase local temp
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db

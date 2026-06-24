@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "winthor-sync": {
+      "verify_jwt": false
+    }
+  }
+}
