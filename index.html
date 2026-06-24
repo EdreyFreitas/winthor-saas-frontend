@@ -329,8 +329,13 @@ tr:hover td{background:var(--color-background-secondary)}
 const SUPABASE_URL = 'https://xtwouhmdzliqmztzbgwl.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_KXMNxaGGZDctvLY3aS8wnw_3zU5k7nX'
 
-const { createClient } = window.supabase
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+let supabase
+try {
+  const { createClient } = window.supabase
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+} catch(e) {
+  console.error('Erro ao inicializar Supabase:', e)
+}
 
 // ============================================================
 // ESTADO
@@ -379,7 +384,7 @@ async function doRegister() {
 }
 
 async function doLogout() {
-  await supabase.auth.signOut()
+  if (supabase) await supabase.auth.signOut()
   S.user = null; S.empresa = null
   S.subscriptions.forEach(sub => sub.unsubscribe())
   S.subscriptions = []
@@ -387,6 +392,7 @@ async function doLogout() {
 }
 
 async function loadPerfil() {
+  if (!supabase) return
   const { data, error } = await supabase.from('perfis').select('*, empresa:empresa_id(*)').eq('id', S.user.id).single()
   if (data) { S.user = { ...S.user, ...data }; S.empresa = data.empresa; }
 }
@@ -654,7 +660,7 @@ document.getElementById('btn-force-sync').addEventListener('click', async () => 
 })
 
 // ============================================================
-// EVENT LISTENERS
+// EVENT LISTENERS - registrados antes de qualquer chamada async
 // ============================================================
 document.getElementById('btn-login').addEventListener('click', doLogin)
 document.getElementById('btn-register').addEventListener('click', doRegister)
@@ -667,11 +673,20 @@ document.getElementById('ped-search').addEventListener('input', renderPedidos)
 document.getElementById('ped-status').addEventListener('change', renderPedidos)
 document.getElementById('prod-search').addEventListener('input', renderProdutos)
 
-// Verificar sessao existente
-supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session) { S.user = session.user; loadPerfil().then(() => showApp()) }
-  else { showLogin() }
-})
+// Verificar sessao ao carregar
+try {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) { S.user = session.user; loadPerfil().then(() => showApp()); }
+    else if (event === 'SIGNED_OUT') { showLogin(); }
+  })
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) { S.user = session.user; loadPerfil().then(() => showApp()) }
+    else { showLogin() }
+  })
+} catch(e) {
+  console.warn('Auth init erro:', e)
+  showLogin()
+}
 </script>
 </body>
 </html>
