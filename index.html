@@ -398,10 +398,14 @@ async function loadPerfil() {
 }
 
 // Verificar sessao ao carregar
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) { S.user = session.user; loadPerfil().then(() => showApp()); }
-  else if (event === 'SIGNED_OUT') { showLogin(); }
-})
+if (supabase) {
+  try {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) { S.user = session.user; loadPerfil().then(() => showApp()); }
+      else if (event === 'SIGNED_OUT') { showLogin(); }
+    })
+  } catch(e) { console.warn('onAuthStateChange erro:', e) }
+}
 
 // ============================================================
 // NAVEGACAO
