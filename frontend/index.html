@@ -331,10 +331,17 @@ const SUPABASE_KEY = 'sb_publishable_KXMNxaGGZDctvLY3aS8wnw_3zU5k7nX'
 
 let supabase
 try {
-  const { createClient } = window.supabase
-  supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+  const _sb = window.supabase
+  const _create = _sb.createClient || _sb.default?.createClient
+  if (!_create) throw new Error('createClient nao encontrado no SDK')
+  supabase = _create(SUPABASE_URL, SUPABASE_KEY)
+  console.log('Supabase inicializado com sucesso')
 } catch(e) {
   console.error('Erro ao inicializar Supabase:', e)
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('login-error')
+    if (el) el.textContent = 'Erro de conexao: ' + e.message
+  })
 }
 
 // ============================================================
