@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Winthor SaaS - Supabase</title>
+<title>Winthor SaaS v1.0.1</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -95,7 +95,7 @@ tr:hover td{background:var(--color-background-secondary)}
 <div id="login-screen" class="login-screen">
   <div class="login-card">
     <div class="login-title">Winthor SaaS</div>
-    <div class="login-sub">Conectado ao Supabase</div>
+    <div class="login-sub">CRM conectado ao Supabase</div>
     <div class="login-field">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
@@ -108,6 +108,9 @@ tr:hover td{background:var(--color-background-secondary)}
     <div class="login-error" id="login-error"></div>
     <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--color-text-tertiary)">
       Nao tem conta? <a href="#" id="link-register" class="login-link">Cadastre-se</a>
+    </div>
+    <div style="margin-top:20px;text-align:center">
+      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.0.1</span>
     </div>
   </div>
 </div>
@@ -335,13 +338,11 @@ try {
   const _create = _sb.createClient || _sb.default?.createClient
   if (!_create) throw new Error('createClient nao encontrado no SDK')
   supabase = _create(SUPABASE_URL, SUPABASE_KEY)
-  console.log('Supabase inicializado com sucesso')
+  console.log('[v1.0.1] Supabase inicializado com sucesso')
 } catch(e) {
-  console.error('Erro ao inicializar Supabase:', e)
-  document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('login-error')
-    if (el) el.textContent = 'Erro de conexao: ' + e.message
-  })
+  console.error('[v1.0.1] Erro ao inicializar Supabase:', e)
+  const el = document.getElementById('login-error')
+  if (el) el.textContent = 'Erro de conexao: ' + e.message
 }
 
 // ============================================================
@@ -365,8 +366,12 @@ function showRegister() { document.getElementById('login-screen').style.display 
 function showApp() { document.getElementById('login-screen').style.display = 'none'; document.getElementById('register-screen').style.display = 'none'; document.getElementById('app').style.display = 'block'; document.getElementById('user-name').textContent = S.user?.nome || ''; loadAllData(); setupRealtime(); }
 
 async function doLogin() {
+  if (!supabase) { document.getElementById('login-error').textContent = 'Supabase nao conectado. Recarregue a pagina.'; return }
   const email = document.getElementById('login-email').value.trim()
   const password = document.getElementById('login-password').value
+  if (!email || !password) { document.getElementById('login-error').textContent = 'Preencha email e senha.'; return }
+  const btn = document.getElementById('btn-login')
+  btn.disabled = true; btn.textContent = 'Entrando...'
   document.getElementById('login-error').textContent = ''
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -374,20 +379,34 @@ async function doLogin() {
     S.user = data.user
     await loadPerfil()
     showApp()
-  } catch (e) { document.getElementById('login-error').textContent = e.message }
+  } catch (e) {
+    document.getElementById('login-error').textContent = e.message
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar'
+  }
 }
 
 async function doRegister() {
+  if (!supabase) { document.getElementById('reg-error').textContent = 'Supabase nao conectado.'; return }
   const name = document.getElementById('reg-name').value.trim()
   const email = document.getElementById('reg-email').value.trim()
   const password = document.getElementById('reg-password').value
+  if (!name || !email || !password) { document.getElementById('reg-error').textContent = 'Preencha todos os campos.'; return }
+  if (password.length < 6) { document.getElementById('reg-error').textContent = 'Senha deve ter no minimo 6 caracteres.'; return }
+  const btn = document.getElementById('btn-register')
+  btn.disabled = true; btn.textContent = 'Cadastrando...'
   document.getElementById('reg-error').textContent = ''
   try {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { nome: name } } })
     if (error) throw error
     showLogin()
-    document.getElementById('login-error').textContent = 'Conta criada! Verifique seu email.'
-  } catch (e) { document.getElementById('reg-error').textContent = e.message }
+    document.getElementById('login-error').textContent = '✓ Conta criada! Faca login agora.'
+    document.getElementById('login-error').style.color = 'var(--color-text-success)'
+  } catch (e) {
+    document.getElementById('reg-error').textContent = e.message
+  } finally {
+    btn.disabled = false; btn.textContent = 'Cadastrar'
+  }
 }
 
 async function doLogout() {
