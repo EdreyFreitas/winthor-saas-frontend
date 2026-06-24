@@ -325,6 +325,8 @@ tr:hover td{background:var(--color-background-secondary)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+;(function() {
+// IIFE: isola todas as variaveis do escopo global (elimina conflito com SDK)
 
 // ============================================================
 // CONFIGURACAO - SUBSTITUA COM SEUS DADOS DO SUPABASE
@@ -717,6 +719,8 @@ try {
   console.warn('Auth init erro:', e)
   showLogin()
 }
+
+})(); // fim IIFE
 </script>
 </body>
 </html>
