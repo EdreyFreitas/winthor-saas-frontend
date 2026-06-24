@@ -319,7 +319,7 @@ tr:hover td{background:var(--color-background-secondary)}
 </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.69.0/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
@@ -329,7 +329,8 @@ tr:hover td{background:var(--color-background-secondary)}
 const SUPABASE_URL = 'https://xtwouhmdzliqmztzbgwl.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_KXMNxaGGZDctvLY3aS8wnw_3zU5k7nX'
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+const { createClient } = window.supabase
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 // ============================================================
 // ESTADO
