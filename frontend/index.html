@@ -423,7 +423,16 @@ const S = {
 // ============================================================
 function showLogin() { document.getElementById('login-screen').style.display = 'flex'; document.getElementById('register-screen').style.display = 'none'; document.getElementById('app').style.display = 'none'; }
 function showRegister() { document.getElementById('login-screen').style.display = 'none'; document.getElementById('register-screen').style.display = 'flex'; document.getElementById('app').style.display = 'none'; }
-function showApp() { document.getElementById('login-screen').style.display = 'none'; document.getElementById('register-screen').style.display = 'none'; document.getElementById('app').style.display = 'block'; document.getElementById('user-name').textContent = S.user?.nome || ''; loadAllData(); setupRealtime(); }
+function showApp() { 
+  document.getElementById('login-screen').style.display = 'none'; 
+  document.getElementById('register-screen').style.display = 'none'; 
+  document.getElementById('app').style.display = 'block'; 
+  document.getElementById('user-name').textContent = S.user?.nome || ''; 
+  const infoUser = document.getElementById('info-user');
+  if (infoUser) infoUser.textContent = S.user?.nome || S.user?.email || '-';
+  loadAllData(); 
+  setupRealtime(); 
+}
 
 async function doLogin() {
   if (!supabase) { document.getElementById('login-error').textContent = 'Supabase nao conectado. Recarregue a pagina.'; return }

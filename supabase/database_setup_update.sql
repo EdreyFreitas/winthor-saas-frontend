@@ -36,3 +36,36 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- FIX: CORRECAO DE RECURSAO INFINITA NAS POLICIES RLS
+-- ============================================================
+
+-- 1. Remover as políticas antigas problemáticas
+DROP POLICY IF EXISTS "perfis_isolamento" ON public.perfis;
+DROP POLICY IF EXISTS "empresas_isolamento" ON public.empresas;
+
+-- 2. Criar políticas de SELECT e UPDATE seguras para a tabela empresas
+DROP POLICY IF EXISTS "empresas_select" ON public.empresas;
+CREATE POLICY "empresas_select" ON public.empresas
+  FOR SELECT USING (id = public.minha_empresa_id());
+
+DROP POLICY IF EXISTS "empresas_update" ON public.empresas;
+CREATE POLICY "empresas_update" ON public.empresas
+  FOR UPDATE USING (id = public.minha_empresa_id());
+
+-- 3. Recriar políticas de perfis de forma segura sem recursão
+DROP POLICY IF EXISTS "perfis_select" ON public.perfis;
+CREATE POLICY "perfis_select" ON public.perfis
+  FOR SELECT USING (
+    id = auth.uid() OR 
+    empresa_id = public.minha_empresa_id()
+  );
+
+DROP POLICY IF EXISTS "perfis_update" ON public.perfis;
+CREATE POLICY "perfis_update" ON public.perfis
+  FOR UPDATE USING (id = auth.uid());
+
+DROP POLICY IF EXISTS "perfis_insert" ON public.perfis;
+CREATE POLICY "perfis_insert" ON public.perfis
+  FOR INSERT WITH CHECK (id = auth.uid());
