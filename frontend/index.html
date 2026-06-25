@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Winthor SaaS v1.1.0</title>
+<title>Winthor SaaS v1.2.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -110,7 +110,7 @@ tr:hover td{background:var(--color-background-secondary)}
       Nao tem conta? <a href="#" id="link-register" class="login-link">Cadastre-se</a>
     </div>
     <div style="margin-top:20px;text-align:center">
-      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.1.0</span>
+      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.2.0</span>
     </div>
   </div>
 </div>
@@ -309,6 +309,34 @@ tr:hover td{background:var(--color-background-secondary)}
       </div>
     </div>
     <div class="card" style="margin-top:16px">
+      <div class="section-title">Credenciais do Winthor</div>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 16px">Configure a URL da API do Winthor e suas credenciais de acesso.</p>
+      
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:var(--color-text-secondary)">URL da API</label>
+        <input type="text" id="config-winthor-url" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);box-sizing:border-box" placeholder="http://seu-ip:porta">
+      </div>
+      
+      <div style="display:flex;gap:12px;margin-bottom:12px">
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:var(--color-text-secondary)">Usuário / Login</label>
+          <input type="text" id="config-winthor-login" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);box-sizing:border-box">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:var(--color-text-secondary)">Senha</label>
+          <input type="password" id="config-winthor-senha" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);box-sizing:border-box">
+        </div>
+      </div>
+      
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:var(--color-text-secondary)">Código da Filial (Winthor)</label>
+        <input type="text" id="config-winthor-filial" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);box-sizing:border-box" placeholder="Ex: 1">
+      </div>
+      
+      <button class="btn btn-primary" id="btn-save-config" style="width:100%"><i class="ti ti-device-floppy"></i> Salvar Credenciais</button>
+      <div id="config-save-result" style="margin-top:12px;font-size:13px;display:none;padding:8px;border-radius:4px"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
       <div class="section-title">Sincronizacao com Winthor</div>
       <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 16px">Busca dados brutos do Winthor e atualiza clientes, pedidos e produtos.</p>
 
@@ -476,7 +504,7 @@ function showPage(id) {
   const titles = { dashboard: 'Dashboard', clientes: 'Clientes', pedidos: 'Pedidos', produtos: 'Produtos', predicoes: 'Predicoes', funil: 'Funil', atendimento: 'Atendimento', exportar: 'Exportar', config: 'Configuracoes' }
   document.getElementById('page-title').textContent = titles[id] || id
   // Carrega dados contextuais ao mudar de aba
-  if (id === 'config') loadLogSync()
+  if (id === 'config') { loadLogSync(); loadWinthorConfig(); }
   if (id === 'dashboard') loadDashboard()
 }
 
@@ -596,6 +624,61 @@ async function loadLogSync() {
       </details>` : ''}
     </div>`
   }).join('')
+}
+
+function loadWinthorConfig() {
+  if (!S.empresa) return
+  document.getElementById('config-winthor-url').value = S.empresa.winthor_url || ''
+  document.getElementById('config-winthor-login').value = S.empresa.winthor_login || ''
+  document.getElementById('config-winthor-senha').value = S.empresa.winthor_senha || ''
+  document.getElementById('config-winthor-filial').value = S.empresa.winthor_filial || '1'
+}
+
+async function saveWinthorConfig() {
+  if (!S.empresa) { alert('Empresa nao carregada'); return }
+  const url = document.getElementById('config-winthor-url').value.trim()
+  const login = document.getElementById('config-winthor-login').value.trim()
+  const senha = document.getElementById('config-winthor-senha').value
+  const filial = document.getElementById('config-winthor-filial').value.trim()
+
+  const btn = document.getElementById('btn-save-config')
+  const resEl = document.getElementById('config-save-result')
+
+  btn.disabled = true
+  btn.innerHTML = '<i class="ti ti-loader"></i> Salvando...'
+  resEl.style.display = 'none'
+
+  try {
+    const { error } = await supabase
+      .from('empresas')
+      .update({
+        winthor_url: url,
+        winthor_login: login,
+        winthor_senha: senha,
+        winthor_filial: filial
+      })
+      .eq('id', S.empresa.id)
+
+    if (error) throw error
+
+    S.empresa.winthor_url = url
+    S.empresa.winthor_login = login
+    S.empresa.winthor_senha = senha
+    S.empresa.winthor_filial = filial
+
+    resEl.style.display = 'block'
+    resEl.style.color = 'var(--color-text-success)'
+    resEl.style.background = 'var(--color-background-success)'
+    resEl.textContent = '✓ Configuracoes salvas com sucesso!'
+  } catch (e) {
+    resEl.style.display = 'block'
+    resEl.style.color = 'var(--color-text-danger)'
+    resEl.style.background = 'var(--color-background-danger)'
+    resEl.textContent = 'Erro ao salvar: ' + e.message
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar Credenciais'
+  }
 }
 
 async function loadDashboard() {
@@ -860,6 +943,7 @@ document.getElementById('btn-force-sync').addEventListener('click', async () => 
 document.getElementById('btn-login').addEventListener('click', doLogin)
 document.getElementById('btn-register').addEventListener('click', doRegister)
 document.getElementById('btn-logout').addEventListener('click', doLogout)
+document.getElementById('btn-save-config').addEventListener('click', saveWinthorConfig)
 document.getElementById('link-register').addEventListener('click', (e) => { e.preventDefault(); showRegister() })
 document.getElementById('link-login').addEventListener('click', (e) => { e.preventDefault(); showLogin() })
 document.getElementById('cli-search').addEventListener('input', renderClientes)
