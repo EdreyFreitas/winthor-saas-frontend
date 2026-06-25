@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Winthor SaaS v1.0.1</title>
+<title>Winthor SaaS v1.0.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -110,7 +110,7 @@ tr:hover td{background:var(--color-background-secondary)}
       Nao tem conta? <a href="#" id="link-register" class="login-link">Cadastre-se</a>
     </div>
     <div style="margin-top:20px;text-align:center">
-      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.0.1</span>
+      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.0.2</span>
     </div>
   </div>
 </div>
@@ -309,8 +309,27 @@ tr:hover td{background:var(--color-background-secondary)}
       </div>
     </div>
     <div class="card" style="margin-top:16px">
-      <div class="section-title">Forcar Sincronizacao</div>
-      <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 16px">Execute manualmente a sincronizacao com o Winthor.</p>
+      <div class="section-title">Sincronizacao com Winthor</div>
+      <p style="font-size:12px;color:var(--color-text-secondary);margin:8px 0 16px">Busca dados brutos do Winthor e atualiza clientes, pedidos e produtos.</p>
+
+      <!-- Barra de progresso visual -->
+      <div id="sync-progress-box" style="display:none;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600;color:var(--color-text-primary)" id="sync-step-label">Iniciando...</span>
+          <span style="font-size:12px;color:var(--color-text-secondary)" id="sync-pct">0%</span>
+        </div>
+        <div style="height:8px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden">
+          <div id="sync-bar-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#3ecf8e,#1c7d4e);border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="sync-step" id="step-auth" style="font-size:11px;padding:3px 8px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-tertiary)">⬤ Autenticacao</span>
+          <span class="sync-step" id="step-cli" style="font-size:11px;padding:3px 8px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-tertiary)">⬤ Clientes</span>
+          <span class="sync-step" id="step-ped" style="font-size:11px;padding:3px 8px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-tertiary)">⬤ Pedidos</span>
+          <span class="sync-step" id="step-prod" style="font-size:11px;padding:3px 8px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-tertiary)">⬤ Produtos</span>
+          <span class="sync-step" id="step-done" style="font-size:11px;padding:3px 8px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-tertiary)">⬤ Concluido</span>
+        </div>
+      </div>
+
       <button class="btn btn-primary" id="btn-force-sync"><i class="ti ti-refresh"></i> Sincronizar Agora</button>
       <div id="sync-result" style="margin-top:12px;font-size:13px;display:none"></div>
     </div>
@@ -340,9 +359,9 @@ try {
   const _create = _sb.createClient || _sb.default?.createClient
   if (!_create) throw new Error('createClient nao encontrado no SDK')
   supabase = _create(SUPABASE_URL, SUPABASE_KEY)
-  console.log('[v1.0.1] Supabase inicializado com sucesso')
+  console.log('[v1.0.2] Supabase inicializado com sucesso')
 } catch(e) {
-  console.error('[v1.0.1] Erro ao inicializar Supabase:', e)
+  console.error('[v1.0.2] Erro ao inicializar Supabase:', e)
   const el = document.getElementById('login-error')
   if (el) el.textContent = 'Erro de conexao: ' + e.message
 }
@@ -680,15 +699,76 @@ async function loadExports() {
 document.getElementById('btn-force-sync').addEventListener('click', async () => {
   const btn = document.getElementById('btn-force-sync')
   const result = document.getElementById('sync-result')
-  btn.disabled = true; btn.textContent = 'Sincronizando...'
+  const progressBox = document.getElementById('sync-progress-box')
+  const barFill = document.getElementById('sync-bar-fill')
+  const pctLabel = document.getElementById('sync-pct')
+  const stepLabel = document.getElementById('sync-step-label')
+
+  // Funcao para ativar um step
+  function setStep(stepId, pct, label, done) {
+    document.querySelectorAll('.sync-step').forEach(s => {
+      s.style.background = 'var(--color-background-secondary)'
+      s.style.color = 'var(--color-text-tertiary)'
+    })
+    const el = document.getElementById(stepId)
+    if (el) {
+      el.style.background = done ? 'var(--color-background-success)' : 'var(--color-background-info)'
+      el.style.color = done ? 'var(--color-text-success)' : 'var(--color-text-info)'
+    }
+    barFill.style.width = pct + '%'
+    pctLabel.textContent = pct + '%'
+    stepLabel.textContent = label
+    // Marcar steps anteriores como concluidos
+    const steps = ['step-auth','step-cli','step-ped','step-prod','step-done']
+    const idx = steps.indexOf(stepId)
+    steps.slice(0, idx).forEach(s => {
+      const el2 = document.getElementById(s)
+      if (el2) { el2.style.background = 'var(--color-background-success)'; el2.style.color = 'var(--color-text-success)' }
+    })
+  }
+
+  // Reset UI
+  btn.disabled = true
+  btn.innerHTML = '<i class="ti ti-refresh"></i> Sincronizando...'
   result.style.display = 'none'
+  progressBox.style.display = 'block'
+  document.querySelectorAll('.sync-step').forEach(s => {
+    s.style.background = 'var(--color-background-secondary)'
+    s.style.color = 'var(--color-text-tertiary)'
+  })
+  barFill.style.width = '0%'
+
+  // Animacao de progresso simulada enquanto Edge Function roda
+  setStep('step-auth', 10, 'Autenticando no Winthor...', false)
+  await new Promise(r => setTimeout(r, 800))
+  setStep('step-cli', 30, 'Sincronizando clientes...', false)
+  await new Promise(r => setTimeout(r, 600))
+  setStep('step-ped', 55, 'Sincronizando pedidos...', false)
+  await new Promise(r => setTimeout(r, 600))
+  setStep('step-prod', 75, 'Sincronizando produtos...', false)
+
   try {
     const { data, error } = await supabase.functions.invoke('winthor-sync')
     if (error) throw error
-    result.style.display = 'block'; result.style.color = 'var(--color-text-success)'; result.textContent = 'Sync iniciada! Aguarde alguns minutos.'
-    setTimeout(loadSyncStatus, 30000)
-  } catch (e) { result.style.display = 'block'; result.style.color = 'var(--color-text-danger)'; result.textContent = 'Erro: ' + e.message }
-  btn.disabled = false; btn.innerHTML = '<i class="ti ti-refresh"></i> Sincronizar Agora'
+    await new Promise(r => setTimeout(r, 400))
+    setStep('step-done', 100, 'Sincronizacao concluida!', true)
+    document.getElementById('step-done').style.background = 'var(--color-background-success)'
+    document.getElementById('step-done').style.color = 'var(--color-text-success)'
+    result.style.display = 'block'
+    result.style.color = 'var(--color-text-success)'
+    result.textContent = '✓ Sync concluida! Dados atualizando...'
+    setTimeout(() => { progressBox.style.display = 'none'; loadSyncStatus(); loadAllData() }, 3000)
+  } catch (e) {
+    barFill.style.background = 'var(--color-text-danger)'
+    stepLabel.textContent = 'Erro na sincronizacao'
+    result.style.display = 'block'
+    result.style.color = 'var(--color-text-danger)'
+    result.textContent = 'Erro: ' + e.message
+    setTimeout(() => { progressBox.style.display = 'none' }, 4000)
+  }
+
+  btn.disabled = false
+  btn.innerHTML = '<i class="ti ti-refresh"></i> Sincronizar Agora'
 })
 
 // ============================================================
