@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Winthor SaaS v1.0.2</title>
+<title>Winthor SaaS v1.1.0</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -110,7 +110,7 @@ tr:hover td{background:var(--color-background-secondary)}
       Nao tem conta? <a href="#" id="link-register" class="login-link">Cadastre-se</a>
     </div>
     <div style="margin-top:20px;text-align:center">
-      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.0.2</span>
+      <span style="font-size:10px;color:var(--color-text-tertiary);background:var(--color-background-secondary);padding:2px 8px;border-radius:10px;letter-spacing:.04em">v1.1.0</span>
     </div>
   </div>
 </div>
@@ -333,6 +333,17 @@ tr:hover td{background:var(--color-background-secondary)}
       <button class="btn btn-primary" id="btn-force-sync"><i class="ti ti-refresh"></i> Sincronizar Agora</button>
       <div id="sync-result" style="margin-top:12px;font-size:13px;display:none"></div>
     </div>
+
+    <!-- LOG DE SINCRONIZACAO -->
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-title" style="margin-bottom:0">Log de Sincronizacoes</div>
+        <button class="btn" onclick="loadLogSync()" style="font-size:11px"><i class="ti ti-refresh"></i> Atualizar</button>
+      </div>
+      <div id="log-sync-list">
+        <div class="empty-state"><i class="ti ti-clock"></i><p>Sem registros ainda</p></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -464,6 +475,9 @@ function showPage(id) {
   const nav = document.querySelector('[data-page="' + id + '"]'); if (nav) nav.classList.add('active')
   const titles = { dashboard: 'Dashboard', clientes: 'Clientes', pedidos: 'Pedidos', produtos: 'Produtos', predicoes: 'Predicoes', funil: 'Funil', atendimento: 'Atendimento', exportar: 'Exportar', config: 'Configuracoes' }
   document.getElementById('page-title').textContent = titles[id] || id
+  // Carrega dados contextuais ao mudar de aba
+  if (id === 'config') loadLogSync()
+  if (id === 'dashboard') loadDashboard()
 }
 
 document.querySelectorAll('.nav-item[data-page]').forEach(el => { el.addEventListener('click', () => showPage(el.dataset.page)) })
@@ -473,7 +487,15 @@ document.querySelectorAll('.nav-item[data-page]').forEach(el => { el.addEventLis
 // ============================================================
 async function loadAllData() {
   if (!S.empresa) return
-  loadClientes(); loadPedidos(); loadProdutos(); loadAtendimentos(); loadSyncStatus(); loadDashboard()
+  // Carrega em paralelo para ser mais rapido
+  await Promise.all([
+    loadClientes(),
+    loadPedidos(),
+    loadProdutos(),
+    loadAtendimentos(),
+    loadSyncStatus(),
+    loadDashboard()
+  ])
 }
 
 async function loadClientes() {
@@ -507,25 +529,86 @@ async function loadAtendimentos() {
 }
 
 async function loadSyncStatus() {
-  const { data, error } = await supabase.from('log_sync').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending: false }).limit(1).single()
+  if (!S.empresa) return
+  const { data } = await supabase.from('log_sync').select('*').eq('empresa_id', S.empresa.id).order('created_at', { ascending: false }).limit(1).single()
   if (data) {
     const el = document.getElementById('sync-status')
-    el.style.display = 'block'
-    el.className = 'sync-status ' + (data.status === 'sucesso' ? 'ok' : data.status === 'parcial' ? 'warn' : 'err')
-    el.textContent = 'Ultima sync: ' + new Date(data.created_at).toLocaleString('pt-BR') + ' - ' + data.status + (data.clientes_novos ? ' (' + data.clientes_novos + ' clientes novos)' : '')
-    document.getElementById('info-sync').textContent = new Date(data.created_at).toLocaleString('pt-BR')
+    if (el) {
+      el.style.display = 'block'
+      el.className = 'sync-status ' + (data.status === 'sucesso' ? 'ok' : data.status === 'parcial' ? 'warn' : 'err')
+      el.textContent = 'Ultima sync: ' + new Date(data.created_at).toLocaleString('pt-BR') + ' — ' + data.status
+        + (data.clientes_novos ? ` | ${data.clientes_novos} clientes` : '')
+        + (data.pedidos_novos ? ` | ${data.pedidos_novos} pedidos` : '')
+        + (data.produtos_novos ? ` | ${data.produtos_novos} produtos` : '')
+    }
+    const infoSync = document.getElementById('info-sync')
+    if (infoSync) infoSync.textContent = new Date(data.created_at).toLocaleString('pt-BR')
+    // Atualiza dot no topbar
+    const dot = document.getElementById('api-dot')
+    const label = document.getElementById('api-label')
+    if (dot && label) {
+      dot.className = 'dot ' + (data.status === 'sucesso' ? 'dot-ok' : 'dot-err')
+      label.textContent = 'Sync: ' + new Date(data.created_at).toLocaleTimeString('pt-BR')
+    }
   }
 }
 
+async function loadLogSync() {
+  if (!S.empresa) return
+  const container = document.getElementById('log-sync-list')
+  if (!container) return
+  container.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i><p>Carregando...</p></div>'
+
+  const { data, error } = await supabase
+    .from('log_sync')
+    .select('*')
+    .eq('empresa_id', S.empresa.id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  if (error || !data || data.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="ti ti-clock"></i><p>Sem registros de sync</p></div>'
+    return
+  }
+
+  container.innerHTML = data.map(log => {
+    const ok = log.status === 'sucesso'
+    const dt = new Date(log.created_at).toLocaleString('pt-BR')
+    const dur = log.duracao_segundos ? `${log.duracao_segundos}s` : '-'
+    const detalhes = log.erro_msg || ''
+    const isErr = detalhes.includes('ERRO') || !ok
+
+    return `<div style="padding:12px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:600;color:var(--color-text-primary)">${dt}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;color:var(--color-text-secondary)">${dur}</span>
+          <span class="badge ${ok ? 'badge-success' : 'badge-danger'}">${log.status}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:${detalhes ? '8px' : '0'}">
+        <span style="font-size:11px;color:var(--color-text-secondary)">👥 <strong>${log.clientes_novos || 0}</strong> clientes</span>
+        <span style="font-size:11px;color:var(--color-text-secondary)">📦 <strong>${log.pedidos_novos || 0}</strong> pedidos</span>
+        <span style="font-size:11px;color:var(--color-text-secondary)">🏷️ <strong>${log.produtos_novos || 0}</strong> produtos</span>
+      </div>
+      ${detalhes ? `<details style="margin-top:4px"><summary style="font-size:11px;cursor:pointer;color:var(--color-text-tertiary)">Ver detalhes</summary>
+        <div style="font-size:11px;color:${isErr ? 'var(--color-text-danger)' : 'var(--color-text-secondary)'};margin-top:6px;background:var(--color-background-secondary);padding:8px;border-radius:4px;word-break:break-word;white-space:pre-wrap">${detalhes.replace(/ \| /g, '\n')}</div>
+      </details>` : ''}
+    </div>`
+  }).join('')
+}
+
 async function loadDashboard() {
+  if (!S.empresa) return
   const { data, error } = await supabase.from('v_dashboard').select('*').eq('empresa_id', S.empresa.id).single()
+  if (error) { console.warn('Dashboard erro:', error.message); return }
   if (data) {
-    document.getElementById('m-cli').textContent = data.total_clientes || '0'
-    document.getElementById('m-inat').textContent = data.clientes_inativos || '0'
-    document.getElementById('m-ped').textContent = data.total_pedidos || '0'
+    document.getElementById('m-cli').textContent = (data.total_clientes || 0).toLocaleString('pt-BR')
+    document.getElementById('m-inat').textContent = (data.clientes_inativos || 0).toLocaleString('pt-BR')
+    document.getElementById('m-ped').textContent = (data.total_pedidos || 0).toLocaleString('pt-BR')
     document.getElementById('m-fat').textContent = data.faturamento_total > 0 ? 'R$ ' + Math.round(data.faturamento_total / 1000) + 'k' : 'R$ 0'
     document.getElementById('m-tick').textContent = data.ticket_medio > 0 ? 'R$ ' + Math.round(data.ticket_medio).toLocaleString('pt-BR') : 'R$ 0'
-    document.getElementById('m-oport').textContent = data.clientes_hot || '0'
+    document.getElementById('m-oport').textContent = (data.clientes_hot || 0).toLocaleString('pt-BR')
   }
 }
 
