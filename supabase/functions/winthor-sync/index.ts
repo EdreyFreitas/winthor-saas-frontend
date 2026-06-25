@@ -144,8 +144,8 @@ async function fetchAllPages(
 async function syncEmpresa(supabase: any, empresa: any) {
   const inicio = Date.now()
   const detalhes: string[] = []
-  // Filial padrao "1" se nao configurada
-  const filialId = empresa.winthor_filial || '1'
+  // Filial padrao "1,2,3,4,5,6" se nao configurada
+  const filialId = empresa.winthor_filial || '1,2,3,4,5,6'
 
   const log = {
     empresa_id: empresa.id,
@@ -231,19 +231,34 @@ async function syncEmpresa(supabase: any, empresa: any) {
     }
 
     // ── 3. PEDIDOS ────────────────────────────────────────────
-    detalhes.push(`Buscando pedidos (filial ${filialId}, 90 dias)...`)
-    const pedidosRaw = await fetchAllPages(
-      baseUrl,
-      '/api/wholesale/v1/orders/list',
-      token,
-      {
-        branchId: filialId,    // OBRIGATORIO conforme doc TOTVS
-        daysOfSearch: 30,     // ultimos 30 dias para evitar timeout no Winthor
-        order: 'lastChange',
-        saleOrigin: 'T'        // T = busca todas as origens de venda (ERP/RCA/Web)
+    const branches = String(filialId).split(',').map(b => b.trim()).filter(Boolean)
+    detalhes.push(`Buscando pedidos para as filiais: ${branches.join(', ')} (30 dias)...`)
+    
+    const promessasPedidos = branches.map(async (branch) => {
+      try {
+        const res = await fetchAllPages(
+          baseUrl,
+          '/api/wholesale/v1/orders/list',
+          token,
+          {
+            branchId: branch,     // OBRIGATORIO conforme doc TOTVS
+            daysOfSearch: 30,     // ultimos 30 dias para evitar timeout no Winthor
+            order: 'lastChange',
+            saleOrigin: 'T'        // T = busca todas as origens de venda (ERP/RCA/Web)
+          }
+        )
+        detalhes.push(`Filial ${branch}: ${res.length} pedidos recebidos`)
+        return res
+      } catch (err: any) {
+        console.error(`Erro ao buscar pedidos filial ${branch}:`, err)
+        detalhes.push(`Filial ${branch} ERRO: ${err.message || String(err)}`)
+        return []
       }
-    )
-    detalhes.push(`Pedidos recebidos da API: ${pedidosRaw.length}`)
+    })
+    
+    const arraysPedidos = await Promise.all(promessasPedidos)
+    const pedidosRaw = arraysPedidos.flat()
+    detalhes.push(`Total de pedidos recebidos da API: ${pedidosRaw.length}`)
 
     if (pedidosRaw.length > 0) {
       const BATCH = 1000

@@ -330,7 +330,7 @@ tr:hover td{background:var(--color-background-secondary)}
       
       <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:var(--color-text-secondary)">Código da Filial (Winthor)</label>
-        <input type="text" id="config-winthor-filial" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);box-sizing:border-box" placeholder="Ex: 1">
+        <input type="text" id="config-winthor-filial" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);box-sizing:border-box" placeholder="Ex: 1,2,3,4,5,6">
       </div>
       
       <button class="btn btn-primary" id="btn-save-config" style="width:100%"><i class="ti ti-device-floppy"></i> Salvar Credenciais</button>
@@ -631,7 +631,7 @@ function loadWinthorConfig() {
   document.getElementById('config-winthor-url').value = S.empresa.winthor_url || ''
   document.getElementById('config-winthor-login').value = S.empresa.winthor_login || ''
   document.getElementById('config-winthor-senha').value = S.empresa.winthor_senha || ''
-  document.getElementById('config-winthor-filial').value = S.empresa.winthor_filial || '1'
+  document.getElementById('config-winthor-filial').value = S.empresa.winthor_filial || '1,2,3,4,5,6'
 }
 
 async function saveWinthorConfig() {
