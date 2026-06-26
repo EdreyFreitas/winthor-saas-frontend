@@ -591,7 +591,7 @@ async function syncEmpresa(
           }
         )
         detalhes.push(`Filial ${branch}: ${res.length} pedidos recebidos`)
-        return res
+        return res.map((p: any) => ({ ...p, branchId: branch }))
       } catch (err: any) {
         console.error(`Erro ao buscar pedidos filial ${branch}:`, err)
         detalhes.push(`Filial ${branch} ERRO: ${err.message || String(err)}`)
@@ -620,7 +620,8 @@ async function syncEmpresa(
           itens: p.listOfOrderItem || [],
           transportadora: String(p.carrierId || ''),
           plano_pagamento: String(p.paymentPlanId || ''),
-          origem: p.saleOrigin || 'W'                            // pcpedc.origemped
+          origem: p.saleOrigin || 'W',                            // pcpedc.origemped
+          filial: String(p.branchId || '')
         })).filter((p: any) => p.id && p.cliente_id)
 
         if (lote.length > 0) {

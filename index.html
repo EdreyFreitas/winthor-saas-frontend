@@ -854,6 +854,7 @@ tr:hover td {
   left: 0;
   z-index: 1000;
   width: 320px;
+  max-width: calc(100vw - 32px);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
@@ -1118,6 +1119,17 @@ tr:hover td {
       <span style="font-size:12px; color:#a1a1aa">Até:</span>
       <input type="date" id="ped-date-end">
     </div>
+
+    <!-- Filtro por Filial -->
+    <select id="ped-filial" style="width:130px; flex:none">
+      <option value="">Filial: Todas</option>
+      <option value="1">Filial 1</option>
+      <option value="2">Filial 2</option>
+      <option value="3">Filial 3</option>
+      <option value="4">Filial 4</option>
+      <option value="5">Filial 5</option>
+      <option value="6">Filial 6</option>
+    </select>
 
     <select id="ped-status" style="width:140px; flex:none">
       <option value="">Status: Todos</option>
@@ -2021,6 +2033,7 @@ function renderClientes() {
 function renderPedidos() {
   const search = document.getElementById('ped-search').value.toLowerCase();
   const status = document.getElementById('ped-status').value;
+  const filial = document.getElementById('ped-filial').value;
   const dateStart = document.getElementById('ped-date-start').value;
   const dateEnd = document.getElementById('ped-date-end').value;
   
@@ -2045,6 +2058,9 @@ function renderPedidos() {
       const vendedorId = cliente ? String(cliente.vendedor_id || '') : '';
       if (!selectedRcas.includes(vendedorId)) return false;
     }
+
+    // 5. Filial filter
+    if (filial && String(p.filial || '') !== filial) return false;
     
     return true;
   });
@@ -3075,6 +3091,7 @@ document.getElementById('cli-search').addEventListener('input', renderClientes)
 document.getElementById('cli-filter').addEventListener('change', renderClientes)
 document.getElementById('ped-search').addEventListener('input', renderPedidos)
 document.getElementById('ped-status').addEventListener('change', renderPedidos)
+document.getElementById('ped-filial').addEventListener('change', renderPedidos)
 document.getElementById('ped-date-start').addEventListener('change', renderPedidos)
 document.getElementById('ped-date-end').addEventListener('change', renderPedidos)
 document.getElementById('ped-date-preset').addEventListener('change', function() { applyDatePreset(this.value); })
