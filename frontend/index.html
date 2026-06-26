@@ -1732,6 +1732,25 @@ async function loadPedidos() {
   const { data, error } = await supabase.from('pedidos').select('*').eq('empresa_id', S.empresa.id).order('data', { ascending: false }).limit(100)
   if (error) { console.error(error); return }
   S.pedidos = data || []
+  
+  // Fetch client details (vendedor_id, nome) for these 100 orders to ensure they map correctly
+  if (S.pedidos.length > 0) {
+    const clientIds = [...new Set(S.pedidos.map(p => p.cliente_id).filter(Boolean))];
+    if (clientIds.length > 0) {
+      const { data: matchedClientes, error: cliError } = await supabase
+        .from('clientes')
+        .select('id, vendedor_id, nome')
+        .in('id', clientIds);
+      if (!cliError && matchedClientes) {
+        matchedClientes.forEach(mc => {
+          if (!S.clientes.some(c => String(c.id) === String(mc.id))) {
+            S.clientes.push(mc);
+          }
+        });
+      }
+    }
+  }
+  
   renderPedidos()
   updateDashMetrics()
 }
@@ -2695,6 +2714,8 @@ function initRcaFilter() {
       const supId = e.target.value;
       const isChecked = e.target.checked;
       
+      e.target.indeterminate = false;
+      
       // Update all child RCAs
       rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]`).forEach(cb => {
         cb.checked = isChecked;
@@ -2713,12 +2734,21 @@ function initRcaFilter() {
       
       // Check if all RCAs under this supervisor are checked
       const rcasOfSup = Array.from(rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]`));
-      const allChecked = rcasOfSup.every(cb => cb.checked);
+      const checkedCount = rcasOfSup.filter(cb => cb.checked).length;
       
       // Update supervisor checkbox
       const supCb = supContainer.querySelector(`.supervisor-checkbox[value="${supId}"]`);
       if (supCb) {
-        supCb.checked = allChecked;
+        if (checkedCount === rcasOfSup.length) {
+          supCb.checked = true;
+          supCb.indeterminate = false;
+        } else if (checkedCount === 0) {
+          supCb.checked = false;
+          supCb.indeterminate = false;
+        } else {
+          supCb.checked = false;
+          supCb.indeterminate = true;
+        }
       }
       
       updateRcaBtnText();
@@ -2731,7 +2761,10 @@ function initRcaFilter() {
   const supSelectAll = document.getElementById('supervisor-select-all');
   if (supSelectAll) {
     supSelectAll.onclick = () => {
-      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = true);
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => {
+        cb.checked = true;
+        cb.indeterminate = false;
+      });
       rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
       updateRcaBtnText();
       updateSupervisorBtnText();
@@ -2742,7 +2775,10 @@ function initRcaFilter() {
   const supClearAll = document.getElementById('supervisor-clear-all');
   if (supClearAll) {
     supClearAll.onclick = () => {
-      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.indeterminate = false;
+      });
       rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
       updateRcaBtnText();
       updateSupervisorBtnText();
@@ -2755,7 +2791,10 @@ function initRcaFilter() {
   if (rcaSelectAll) {
     rcaSelectAll.onclick = () => {
       rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
-      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = true);
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => {
+        cb.checked = true;
+        cb.indeterminate = false;
+      });
       updateRcaBtnText();
       updateSupervisorBtnText();
       renderPedidos();
@@ -2766,7 +2805,10 @@ function initRcaFilter() {
   if (rcaClearAll) {
     rcaClearAll.onclick = () => {
       rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
-      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.indeterminate = false;
+      });
       updateRcaBtnText();
       updateSupervisorBtnText();
       renderPedidos();
@@ -2777,22 +2819,25 @@ function initRcaFilter() {
   updateSupervisorBtnText();
 }
 
+
 function updateSupervisorBtnText() {
   const container = document.getElementById('supervisor-options-container');
   const btn = document.getElementById('supervisor-select-btn');
   if (!container || !btn) return;
   const checkboxes = container.querySelectorAll('.supervisor-checkbox');
-  const checked = Array.from(checkboxes).filter(cb => cb.checked);
-  if (checked.length === checkboxes.length) {
+  const active = Array.from(checkboxes).filter(cb => cb.checked || cb.indeterminate);
+  const allFullyChecked = Array.from(checkboxes).every(cb => cb.checked);
+  
+  if (allFullyChecked && checkboxes.length > 0) {
     btn.textContent = 'Supervisor: Todos';
-  } else if (checked.length === 0) {
+  } else if (active.length === 0) {
     btn.textContent = 'Supervisor: Nenhum';
-  } else if (checked.length === 1) {
-    const val = checked[0].value;
+  } else if (active.length === 1) {
+    const val = active[0].value;
     const name = SUPERVISORES[val] || '';
     btn.textContent = `Supervisor: [${val}] ${name.split(' ')[0]}`;
   } else {
-    btn.textContent = `Supervisor: ${checked.length} selecionados`;
+    btn.textContent = `Supervisor: ${active.length} selecionados`;
   }
 }
 
