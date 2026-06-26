@@ -678,6 +678,135 @@ tr:hover td {
   justify-content: space-between;
   margin-top: 4px;
 }
+
+/* MODAL STYLING */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease-out;
+}
+.modal-content {
+  background: #18181b; /* Zinc 900 */
+  border: 1px solid #27272a; /* Zinc 800 */
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #27272a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #121214;
+}
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fafafa;
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+  padding: 4px;
+}
+.modal-close-btn:hover {
+  color: #fafafa;
+}
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #27272a;
+  margin-bottom: 20px;
+}
+.modal-tab {
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #a1a1aa;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.modal-tab:hover {
+  color: #fafafa;
+}
+.modal-tab.active {
+  border-bottom-color: #24b47e; /* Supabase Green */
+  color: #24b47e;
+}
+.modal-tab-content {
+  display: none;
+}
+.modal-tab-content.active {
+  display: block;
+}
+.modal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 640px) {
+  .modal-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+.modal-body p {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #a1a1aa;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  padding-bottom: 6px;
+}
+.modal-body p strong {
+  color: #fafafa;
+}
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.clickable-row:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
@@ -774,6 +903,20 @@ tr:hover td {
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
   <div id="sync-status" class="sync-status ok" style="display:none"></div>
+  
+  <!-- FILTRO DE DATA DO DASHBOARD -->
+  <div class="search-bar" style="margin-bottom:20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:#18181b; padding:16px; border-radius:12px; border:1px solid #27272a">
+    <div style="display:flex; align-items:center; gap:8px">
+      <span style="font-size:12px; font-weight:500; color:#a1a1aa">Período de:</span>
+      <input type="date" id="dash-start-date" style="padding:6px 12px; border-radius:8px; border:1px solid #27272a; background:#09090b; color:#fafafa; font-size:13px">
+    </div>
+    <div style="display:flex; align-items:center; gap:8px">
+      <span style="font-size:12px; font-weight:500; color:#a1a1aa">até:</span>
+      <input type="date" id="dash-end-date" style="padding:6px 12px; border-radius:8px; border:1px solid #27272a; background:#09090b; color:#fafafa; font-size:13px">
+    </div>
+    <button class="btn" id="btn-filter-dash" style="background:#24b47e; color:#fff; border:none; padding:8px 16px; font-size:13px; font-weight:600; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity 0.15s"><i class="ti ti-filter"></i> Filtrar</button>
+  </div>
+
   <div class="metric-grid">
     <div class="metric"><div class="metric-label">Total clientes</div><div class="metric-value" id="m-cli">-</div></div>
     <div class="metric"><div class="metric-label">Inativos +15 dias</div><div class="metric-value metric-dn" id="m-inat">-</div></div>
@@ -822,8 +965,8 @@ tr:hover td {
     <input type="text" id="prod-search" placeholder="Nome ou codigo...">
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-    <table><thead><tr><th>Cod.</th><th>Nome</th><th>Categoria</th><th>Fornecedor</th><th>Status</th></tr></thead>
-    <tbody id="prod-tbody"><tr><td colspan="5"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <table><thead><tr><th>Cod.</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Seção</th><th>Marca</th><th>Status</th></tr></thead>
+    <tbody id="prod-tbody"><tr><td colspan="7"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
   </div>
 </div>
 
@@ -1021,6 +1164,8 @@ function showApp() {
   document.getElementById('user-name').textContent = S.user?.nome || ''; 
   const infoUser = document.getElementById('info-user');
   if (infoUser) infoUser.textContent = S.user?.nome || S.user?.email || '-';
+  setupModalTabs();
+  initDashboardDates();
   loadAllData(); 
   setupRealtime(); 
 }
@@ -1106,6 +1251,7 @@ function showPage(id) {
   // Carrega dados contextuais ao mudar de aba
   if (id === 'config') { loadLogSync(); loadWinthorConfig(); }
   if (id === 'dashboard') loadDashboard()
+  if (id === 'predicoes') { loadPredictionsTab(); renderTopSellingProducts(); }
 }
 
 document.querySelectorAll('.nav-item[data-page]').forEach(el => { el.addEventListener('click', () => showPage(el.dataset.page)) })
@@ -1281,18 +1427,101 @@ async function saveWinthorConfig() {
   }
 }
 
-async function loadDashboard() {
-  if (!S.empresa) return
-  const { data, error } = await supabase.from('v_dashboard').select('*').eq('empresa_id', S.empresa.id).single()
-  if (error) { console.warn('Dashboard erro:', error.message); return }
-  if (data) {
-    document.getElementById('m-cli').textContent = (data.total_clientes || 0).toLocaleString('pt-BR')
-    document.getElementById('m-inat').textContent = (data.clientes_inativos || 0).toLocaleString('pt-BR')
-    document.getElementById('m-ped').textContent = (data.total_pedidos || 0).toLocaleString('pt-BR')
-    document.getElementById('m-fat').textContent = data.faturamento_total > 0 ? 'R$ ' + Math.round(data.faturamento_total / 1000) + 'k' : 'R$ 0'
-    document.getElementById('m-tick').textContent = data.ticket_medio > 0 ? 'R$ ' + Math.round(data.ticket_medio).toLocaleString('pt-BR') : 'R$ 0'
-    document.getElementById('m-oport').textContent = (data.clientes_hot || 0).toLocaleString('pt-BR')
+let dashChartInstance = null;
+let funilChartInstance = null;
+
+function initDashboardDates() {
+  const startInput = document.getElementById('dash-start-date');
+  const endInput = document.getElementById('dash-end-date');
+  if (startInput && endInput) {
+    if (!startInput.value) {
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      startInput.value = oneYearAgo.toISOString().split('T')[0];
+    }
+    if (!endInput.value) {
+      endInput.value = new Date().toISOString().split('T')[0];
+    }
   }
+}
+
+async function loadDashboard() {
+  if (!S.empresa) return;
+  initDashboardDates();
+  const startDate = document.getElementById('dash-start-date').value;
+  const endDate = document.getElementById('dash-end-date').value;
+
+  const { data, error } = await supabase.rpc('get_dashboard_metrics', {
+    p_empresa_id: S.empresa.id,
+    p_start_date: startDate,
+    p_end_date: endDate
+  });
+  if (error) { console.warn('Dashboard RPC erro:', error.message); return; }
+  if (data) {
+    document.getElementById('m-cli').textContent = (data.total_clientes || 0).toLocaleString('pt-BR');
+    document.getElementById('m-inat').textContent = (data.clientes_inativos || 0).toLocaleString('pt-BR');
+    document.getElementById('m-ped').textContent = (data.total_pedidos || 0).toLocaleString('pt-BR');
+    document.getElementById('m-fat').textContent = data.faturamento_total > 0 ? fmtMoney(data.faturamento_total) : 'R$ 0,00';
+    document.getElementById('m-tick').textContent = data.ticket_medio > 0 ? fmtMoney(data.ticket_medio) : 'R$ 0,00';
+    document.getElementById('m-oport').textContent = (data.clientes_hot || 0).toLocaleString('pt-BR');
+  }
+
+  await loadDashboardChart(startDate, endDate);
+  updateDashMetrics();
+}
+
+async function loadDashboardChart(startDate, endDate) {
+  const ctx = document.getElementById('chart-vendas');
+  if (!ctx) return;
+  
+  const { data, error } = await supabase.rpc('get_sales_by_date', {
+    p_empresa_id: S.empresa.id,
+    p_start_date: startDate,
+    p_end_date: endDate
+  });
+  if (error) { console.error('Erro ao carregar vendas do grafico:', error); return; }
+  
+  const labels = [];
+  const values = [];
+  if (data && data.length > 0) {
+    data.forEach(row => {
+      labels.push(fmtDate(row.sales_date));
+      values.push(Math.round(row.total_sales));
+    });
+  }
+  
+  if (dashChartInstance) {
+    dashChartInstance.destroy();
+  }
+  
+  dashChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Faturamento',
+        data: values,
+        backgroundColor: '#24b47e',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 } } },
+        y: {
+          ticks: {
+            callback: v => 'R$ ' + Math.round(v).toLocaleString('pt-BR'),
+            font: { size: 10 }
+          }
+        }
+      }
+    }
+  });
 }
 
 // ============================================================
@@ -1344,7 +1573,14 @@ function renderClientes() {
   if (!list.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhum cliente</p></div></td></tr>'; return }
   tb.innerHTML = list.slice(0, 100).map(c => {
     const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low'
-    return '<tr><td><div style="font-weight:500">' + (c.nome || '-') + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + (c.cidade || '') + '</div></td><td style="font-size:12px">' + (c.cnpj || '-') + '</td><td style="font-size:12px">' + (c.cidade || '-') + '</td><td><div class="score-bar"><div class="' + cl + '" style="width:' + (c.score || 0) + '%"></div></div> ' + (c.score || 0) + '</td><td><span class="badge ' + (c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info') + '">' + (c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold') + '</span></td><td style="font-size:12px">' + (c.dias_sem_compra ? c.dias_sem_compra + ' dias' : '-') + '</td></tr>'
+    return `<tr class="clickable-row" onclick="window.openCustomerModal(${c.id})">
+      <td><div style="font-weight:500">${c.nome || '-'}</div><div style="font-size:11px;color:var(--text-secondary)">${c.cidade || ''}</div></td>
+      <td style="font-size:12px">${c.cnpj || '-'}</td>
+      <td style="font-size:12px">${c.cidade || '-'}</td>
+      <td><div class="score-bar"><div class="${cl}" style="width:${c.score || 0}%"></div></div> ${c.score || 0}</td>
+      <td><span class="badge ${c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info'}">${c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold'}</span></td>
+      <td style="font-size:12px">${c.dias_sem_compra !== null ? c.dias_sem_compra + ' dias' : '-'}</td>
+    </tr>`
   }).join('')
 }
 
@@ -1360,7 +1596,13 @@ function renderPedidos() {
   if (!list.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Nenhum pedido</p></div></td></tr>'; return }
   tb.innerHTML = list.slice(0, 100).map(p => {
     const statusMap = { C: 'badge-success', L: 'badge-info', F: 'badge-warning' }
-    return '<tr><td style="font-weight:500">#' + (p.id || '-') + '</td><td style="font-size:12px">' + (p.cliente_nome || '-') + '</td><td style="font-size:12px">' + fmtDate(p.data) + '</td><td style="font-size:12px">' + fmtMoney(p.total) + '</td><td><span class="badge ' + (statusMap[p.status] || 'badge-gray') + '">' + (p.status || '-') + '</span></td></tr>'
+    return `<tr class="clickable-row" onclick="window.openOrderModal(${p.id})">
+      <td style="font-weight:600">#${p.id || '-'}</td>
+      <td style="font-size:12px">${p.cliente_nome || '-'}</td>
+      <td style="font-size:12px">${fmtDate(p.data)}</td>
+      <td style="font-size:12px">${fmtMoney(p.total)}</td>
+      <td><span class="badge ${statusMap[p.status] || 'badge-gray'}">${p.status || '-'}</span></td>
+    </tr>`
   }).join('')
 }
 
@@ -1368,8 +1610,18 @@ function renderProdutos() {
   const search = document.getElementById('prod-search').value.toLowerCase()
   const list = S.produtos.filter(p => !search || (p.nome || '').toLowerCase().includes(search) || String(p.id).includes(search))
   const tb = document.getElementById('prod-tbody')
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Sem produtos</p></div></td></tr>'; return }
-  tb.innerHTML = list.slice(0, 100).map(p => '<tr><td style="font-size:12px">' + p.id + '</td><td><div style="font-weight:500;font-size:13px">' + (p.nome || '-') + '</div></td><td style="font-size:12px">' + (p.categoria_nome || '-') + '</td><td style="font-size:12px">' + (p.fornecedor || '-') + '</td><td>' + (p.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>') + '</td></tr>').join('')
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Sem produtos</p></div></td></tr>'; return }
+  tb.innerHTML = list.slice(0, 100).map(p => 
+    `<tr>
+      <td style="font-size:12px">${p.id}</td>
+      <td><div style="font-weight:500;font-size:13px">${p.nome || '-'}</div></td>
+      <td style="font-size:12px">${fmtMoney(p.preco)}</td>
+      <td style="font-size:12px">${p.categoria_nome || '-'}</td>
+      <td style="font-size:12px">${p.secao || '-'}</td>
+      <td style="font-size:12px">${p.fornecedor || '-'}</td>
+      <td>${p.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
+    </tr>`
+  ).join('')
 }
 
 function renderAtendimentos() {
@@ -1379,22 +1631,91 @@ function renderAtendimentos() {
   document.getElementById('at-semana').textContent = S.atendimentos.filter(a => new Date(a.created_at).getTime() > semana).length
   document.getElementById('at-conc').textContent = S.atendimentos.length
   document.getElementById('at-hist-list').innerHTML = S.atendimentos.length ? S.atendimentos.slice(0, 20).map(a => '<div class="note-item"><div class="note-meta">' + a.tipo + ' - ' + a.cliente_nome + ' - ' + new Date(a.created_at).toLocaleString('pt-BR') + '</div>' + (a.observacao || 'Sem observacao') + '</div>').join('') : '<div class="empty-state"><i class="ti ti-headset"></i><p>Nenhum atendimento</p></div>'
-  document.getElementById('atividades-dash').innerHTML = S.atendimentos.length ? S.atendimentos.slice(0, 4).map(a => '<div style="padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:13px;font-weight:500">' + a.cliente_nome + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + a.tipo + ' - ' + new Date(a.created_at).toLocaleString('pt-BR') + '</div></div>').join('') : '<div class="empty-state"><i class="ti ti-activity"></i><p>Nenhuma atividade</p></div>'
+  renderRecentActivities();
+}
+
+function renderRecentActivities() {
+  const container = document.getElementById('atividades-dash');
+  if (!container) return;
+  
+  const activities = [];
+  
+  S.pedidos.forEach(p => {
+    activities.push({
+      type: 'pedido',
+      date: new Date(p.created_at || p.data),
+      title: `Novo pedido #${p.id} - ${p.cliente_nome}`,
+      subtitle: `${fmtMoney(p.total)} - Status: ${p.status}`,
+      icon: 'ti-file-invoice',
+      color: '#3ecf8e',
+      onClick: `window.openOrderModal(${p.id})`
+    });
+  });
+  
+  S.atendimentos.forEach(a => {
+    activities.push({
+      type: 'atendimento',
+      date: new Date(a.created_at),
+      title: `Atendimento (${a.tipo}) - ${a.cliente_nome}`,
+      subtitle: a.observacao || 'Sem observações',
+      icon: 'ti-headset',
+      color: '#3b82f6',
+      onClick: ''
+    });
+  });
+  
+  activities.sort((a, b) => b.date - a.date);
+  
+  const showList = activities.slice(0, 6);
+  if (showList.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="ti ti-activity"></i><p>Nenhuma atividade recente</p></div>';
+    return;
+  }
+  
+  container.innerHTML = showList.map(act => {
+    const timeStr = act.date.toLocaleString('pt-BR');
+    let clickAttr = act.onClick;
+    if (act.type === 'atendimento') {
+      const cli = S.clientes.find(c => c.nome === act.title.split(' - ')[1]);
+      if (cli) {
+        clickAttr = `window.openCustomerModal(${cli.id})`;
+      }
+    }
+    
+    return `<div class="clickable-row" onclick="${clickAttr}" style="padding:10px 0; border-bottom:0.5px solid var(--border-color); display:flex; gap:12px; align-items:flex-start">
+      <div style="width:28px; height:28px; border-radius:6px; background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:${act.color}">
+        <i class="ti ${act.icon}" style="font-size:16px"></i>
+      </div>
+      <div style="flex:1; min-width:0">
+        <div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff">${act.title}</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">${act.subtitle}</div>
+      </div>
+      <div style="font-size:10px; color:var(--text-tertiary); flex-shrink:0; text-align:right">${timeStr}</div>
+    </div>`;
+  }).join('');
 }
 
 function updateDashMetrics() {
   const risco = S.clientes.filter(c => c.dias_sem_compra > 15).slice(0, 5)
-  document.getElementById('clientes-risco-list').innerHTML = risco.length ? risco.map(c => '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="width:30px;height:30px;border-radius:50%;background:var(--color-background-danger);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-text-danger);flex-shrink:0">' + initials(c.nome) + '</div><div style="flex:1"><div style="font-size:13px">' + (c.nome || '-') + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + (c.dias_sem_compra || '?') + ' dias sem compra</div></div><span class="badge badge-danger">Contatar</span></div>').join('') : '<div class="empty-state"><i class="ti ti-check"></i><p>Nenhum em risco</p></div>'
+  document.getElementById('clientes-risco-list').innerHTML = risco.length ? risco.map(c => 
+    `<div class="clickable-row" onclick="window.openCustomerModal(${c.id})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border-color)">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(239, 68, 68, 0.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-danger);flex-shrink:0">${initials(c.nome)}</div>
+      <div style="flex:1; min-width:0">
+        <div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${c.nome || '-'}</div>
+        <div style="font-size:11px;color:var(--text-secondary)">${c.dias_sem_compra || '?'} dias sem compra</div>
+      </div>
+      <span class="badge badge-danger">Contatar</span>
+    </div>`
+  ).join('') : '<div class="empty-state"><i class="ti ti-check"></i><p>Nenhum em risco</p></div>'
 
   const topCli = S.clientes.slice().sort((a, b) => (b.valor_total_compras || 0) - (a.valor_total_compras || 0)).slice(0, 5)
-  document.getElementById('top-cli-list').innerHTML = topCli.length ? topCli.map((c, i) => '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:13px;font-weight:500;color:var(--color-text-tertiary);width:16px">' + (i + 1) + '</div><div style="flex:1;font-size:13px">' + (c.nome || '-') + '</div><div style="font-size:12px;font-weight:500">' + fmtMoney(c.valor_total_compras) + '</div></div>').join('') : '<div class="empty-state"><i class="ti ti-star"></i><p>Carregue dados</p></div>'
-
-  const ctx = document.getElementById('chart-vendas')
-  if (ctx && S.pedidos.length) {
-    const byDay = {}; S.pedidos.forEach(p => { const d = fmtDate(p.data); byDay[d] = (byDay[d] || 0) + parseFloat(p.total || 0) })
-    const labels = Object.keys(byDay).sort().slice(-10)
-    new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Faturamento', data: labels.map(l => Math.round(byDay[l])), backgroundColor: '#3ecf8e', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { callback: v => 'R$' + Math.round(v / 1000) + 'k', font: { size: 10 } } } } } })
-  }
+  document.getElementById('top-cli-list').innerHTML = topCli.length ? topCli.map((c, i) => 
+    `<div class="clickable-row" onclick="window.openCustomerModal(${c.id})" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border-color)">
+      <div style="font-size:13px;font-weight:500;color:var(--text-tertiary);width:16px">${i + 1}</div>
+      <div style="flex:1;font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${c.nome || '-'}</div>
+      <div style="font-size:12px;font-weight:500">${fmtMoney(c.valor_total_compras)}</div>
+    </div>`
+  ).join('') : '<div class="empty-state"><i class="ti ti-star"></i><p>Carregue dados</p></div>'
 
   // Predicoes
   const hot = S.clientes.filter(c => c.segmento === 'hot').length
@@ -1405,21 +1726,371 @@ function updateDashMetrics() {
   document.getElementById('pred-risk').textContent = cold
   document.getElementById('pred-opp').textContent = S.clientes.filter(c => c.score > 60 && c.quantidade_pedidos > 2).length
 
-  document.getElementById('pred-list').innerHTML = S.clientes.slice(0, 8).map(c => { const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low'; return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="width:32px;height:32px;border-radius:50%;background:var(--color-background-info);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-text-info);flex-shrink:0">' + initials(c.nome) + '</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (c.nome || '-') + '</div><div style="font-size:11px;color:var(--color-text-secondary)">' + (c.quantidade_pedidos || 0) + ' pedidos - R$ ' + Math.round(c.valor_total_compras || 0).toLocaleString('pt-BR') + '</div></div><div style="flex-shrink:0;text-align:right"><div style="font-size:13px;font-weight:500">' + (c.score || 0) + '</div><div class="score-bar"><div class="' + cl + '" style="width:' + (c.score || 0) + '%"></div></div></div></div>'; }).join('')
-
   // Funil
   const total = S.clientes.length || 1
-  document.getElementById('funil-content').innerHTML = [{ cls: 'fs-hot', l: 'Quentes - compra iminente', list: hot }, { cls: 'fs-warm', l: 'Mornos - dentro do ciclo', list: warm }, { cls: 'fs-cold', l: 'Frios - reengajamento', list: cold }].map(item => '<div class="funnel-stage ' + item.cls + '"><div style="font-size:12px;font-weight:500">' + item.l + '</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">' + item.list + ' clientes</div><div class="progress"><div class="progress-fill" style="width:' + Math.round(item.list / total * 100) + '%"></div></div></div>').join('')
-  document.getElementById('funil-tbody').innerHTML = S.clientes.slice(0, 30).map(c => '<tr><td style="font-size:13px">' + (c.nome || '-') + '</td><td><span class="badge ' + (c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info') + '">' + (c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold') + '</span></td><td style="font-size:12px">' + (c.dias_sem_compra !== null ? c.dias_sem_compra + ' dias' : '-') + '</td><td><div class="score-bar"><div class="score-fill ' + (c.segmento === 'hot' ? 'high' : c.segmento === 'warm' ? 'med' : 'low') + '" style="width:' + (c.score || 0) + '%"></div></div> ' + (c.score || 0) + '</td><td style="font-size:12px">' + (c.segmento === 'hot' ? 'Contatar agora' : c.segmento === 'warm' ? 'Acompanhar' : 'Reengajar') + '</td></tr>').join('')
+  document.getElementById('funil-content').innerHTML = [
+    { cls: 'fs-hot', l: 'Quentes - compra iminente', list: hot },
+    { cls: 'fs-warm', l: 'Mornos - dentro do ciclo', list: warm },
+    { cls: 'fs-cold', l: 'Frios - reengajamento', list: cold }
+  ].map(item => `<div class="funnel-stage ${item.cls}"><div style="font-size:12px;font-weight:500">${item.l}</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${item.list} clientes</div><div class="progress"><div class="progress-fill" style="width:${Math.round(item.list / total * 100)}%"></div></div></div>`).join('')
+  
+  document.getElementById('funil-tbody').innerHTML = S.clientes.slice(0, 30).map(c => 
+    `<tr class="clickable-row" onclick="window.openCustomerModal(${c.id})">
+      <td style="font-size:13px">${c.nome || '-'}</td>
+      <td><span class="badge ${c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info'}">${c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold'}</span></td>
+      <td style="font-size:12px">${c.dias_sem_compra !== null ? c.dias_sem_compra + ' dias' : '-'}</td>
+      <td><div class="score-bar"><div class="score-fill ${c.segmento === 'hot' ? 'high' : c.segmento === 'warm' ? 'med' : 'low'}" style="width:${c.score || 0}%"></div></div> ${c.score || 0}</td>
+      <td style="font-size:12px">${c.segmento === 'hot' ? 'Contatar agora' : c.segmento === 'warm' ? 'Acompanhar' : 'Reengajar'}</td>
+    </tr>`
+  ).join('')
 
   const fctx = document.getElementById('chart-funil')
-  if (fctx) { new Chart(fctx, { type: 'doughnut', data: { labels: ['Quentes', 'Mornos', 'Frios'], datasets: [{ data: [hot, warm, cold], backgroundColor: ['#e24b4a', '#ef9f27', '#3ecf8e'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }) }
+  if (fctx) {
+    if (funilChartInstance) {
+      funilChartInstance.destroy();
+    }
+    funilChartInstance = new Chart(fctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Quentes', 'Mornos', 'Frios'],
+        datasets: [{
+          data: [hot, warm, cold],
+          backgroundColor: ['#e24b4a', '#ef9f27', '#3ecf8e'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+}
 
-  // Produtos recomendados
-  const prodMap = {}
-  S.pedidos.forEach(p => { (p.itens || []).forEach(it => { prodMap[it.productId] = (prodMap[it.productId] || 0) + parseFloat(it.quantity || 1) }) })
-  const topProd = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  document.getElementById('prod-rec-list').innerHTML = topProd.length ? topProd.map(([id, qty]) => { const p = S.produtos.find(x => String(x.id) === String(id)); return '<div style="padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><div style="font-size:13px;font-weight:500">' + (p ? p.nome : 'Produto ' + id) + '</div><div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">' + Math.round(qty) + ' unid. vendidas</div></div>'; }).join('') : '<div class="empty-state"><p>Sem dados</p></div>'
+// Detail Modal Functions
+async function openCustomerModal(customerId) {
+  const modal = document.getElementById('customer-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  
+  // Reset tabs
+  document.querySelectorAll('#customer-modal .modal-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#customer-modal .modal-tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('tab-btn-cust-info').classList.add('active');
+  document.getElementById('tab-cust-info').style.display = 'block';
+  
+  // Find customer
+  const c = S.clientes.find(x => String(x.id) === String(customerId));
+  if (!c) {
+    alert('Cliente não encontrado localmente.');
+    return;
+  }
+  
+  // Set title
+  document.getElementById('modal-cust-name').textContent = c.nome || 'Cliente sem nome';
+  
+  // Populate Profile Info
+  document.getElementById('modal-cust-cnpj').textContent = c.cnpj || '-';
+  document.getElementById('modal-cust-city').textContent = (c.cidade || '') + (c.estado ? ' / ' + c.estado : '');
+  document.getElementById('modal-cust-phone').textContent = c.telefone || '-';
+  document.getElementById('modal-cust-email').textContent = c.email || '-';
+  document.getElementById('modal-cust-seller').textContent = c.vendedor_nome ? `[${c.vendedor_id}] ${c.vendedor_nome}` : '-';
+  document.getElementById('modal-cust-status').innerHTML = c.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>';
+  
+  // Purchase indicators
+  document.getElementById('modal-cust-total-orders').textContent = c.quantidade_pedidos || 0;
+  document.getElementById('modal-cust-total-spend').textContent = fmtMoney(c.valor_total_compras);
+  document.getElementById('modal-cust-avg-ticket').textContent = fmtMoney(c.quantidade_pedidos > 0 ? (c.valor_total_compras / c.quantidade_pedidos) : 0);
+  document.getElementById('modal-cust-last-date').textContent = fmtDate(c.ultima_compra);
+  document.getElementById('modal-cust-dias-sem-compra').textContent = c.dias_sem_compra !== null ? c.dias_sem_compra + ' dias' : '-';
+
+  // Load predictions
+  document.getElementById('modal-cust-churn-risk').textContent = 'Calculando...';
+  document.getElementById('modal-cust-next-date').textContent = 'Calculando...';
+  document.getElementById('modal-cust-cycle').textContent = '-';
+  
+  const { data: predData, error: predErr } = await supabase.rpc('get_customer_predictions', {
+    p_empresa_id: S.empresa.id,
+    p_cliente_id: customerId
+  });
+  if (predData) {
+    document.getElementById('modal-cust-churn-risk').innerHTML = `<span class="badge ${predData.churn_risk === 'Alto' ? 'badge-danger' : predData.churn_risk === 'Médio' ? 'badge-warning' : 'badge-success'}">${predData.churn_risk}</span>`;
+    document.getElementById('modal-cust-next-date').textContent = fmtDate(predData.next_purchase_date);
+    document.getElementById('modal-cust-cycle').textContent = predData.average_cycle || 30;
+  } else {
+    document.getElementById('modal-cust-churn-risk').textContent = '-';
+    document.getElementById('modal-cust-next-date').textContent = '-';
+    document.getElementById('modal-cust-cycle').textContent = '-';
+  }
+
+  // Load cross-sell recommendations
+  const recContainer = document.getElementById('modal-cust-recs');
+  recContainer.innerHTML = '<div style="color:var(--text-tertiary)">Carregando...</div>';
+  const { data: recData } = await supabase.rpc('get_customer_cross_sell', {
+    p_empresa_id: S.empresa.id,
+    p_cliente_id: customerId
+  });
+  if (recData && recData.length > 0) {
+    recContainer.innerHTML = recData.map(r => 
+      `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:0.5px dashed rgba(255,255,255,0.05); padding-bottom:4px">
+        <span style="font-weight:500; color:#fff">${r.product_name}</span>
+        <span class="badge badge-gray" style="font-size:9px">${r.category_name}</span>
+      </div>`
+    ).join('');
+  } else {
+    recContainer.textContent = 'Sem sugestões no momento.';
+  }
+
+  // Load order history
+  const orderTb = document.getElementById('modal-cust-orders-tbody');
+  orderTb.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Carregando histórico...</p></div></td></tr>';
+  
+  const { data: orders, error: oErr } = await supabase
+    .from('pedidos')
+    .select('id, data, total, status, itens')
+    .eq('empresa_id', S.empresa.id)
+    .eq('cliente_id', customerId)
+    .order('data', { ascending: false });
+    
+  if (orders && orders.length > 0) {
+    const statusMap = { C: 'badge-success', L: 'badge-info', F: 'badge-warning' };
+    orderTb.innerHTML = orders.map(o => 
+      `<tr class="clickable-row" onclick="window.openOrderModal(${o.id})">
+        <td style="font-weight:600">#${o.id}</td>
+        <td>${fmtDate(o.data)}</td>
+        <td>${fmtMoney(o.total)}</td>
+        <td><span class="badge ${statusMap[o.status] || 'badge-gray'}">${o.status}</span></td>
+      </tr>`
+    ).join('');
+    
+    // Aggregate purchased products
+    const prodMap = {};
+    orders.forEach(o => {
+      (o.itens || []).forEach(it => {
+        const pId = it.productId;
+        const qty = parseFloat(it.quantity || 0);
+        const price = parseFloat(it.sellPrice || 0);
+        if (!prodMap[pId]) {
+          prodMap[pId] = { id: pId, qty: 0, spend: 0 };
+        }
+        prodMap[pId].qty += qty;
+        prodMap[pId].spend += qty * price;
+      });
+    });
+    const prodList = Object.values(prodMap).sort((a,b) => b.spend - a.spend);
+    const prodTb = document.getElementById('modal-cust-products-tbody');
+    if (prodList.length > 0) {
+      prodTb.innerHTML = prodList.map(item => {
+        const p = S.produtos.find(x => String(x.id) === String(item.id));
+        return `<tr>
+          <td>${item.id}</td>
+          <td style="font-weight:500">${p ? p.nome : 'Produto ' + item.id}</td>
+          <td>${Math.round(item.qty)}</td>
+          <td>${fmtMoney(item.spend)}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      prodTb.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Nenhum produto comprado</p></div></td></tr>';
+    }
+  } else {
+    orderTb.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Nenhum pedido registrado</p></div></td></tr>';
+    document.getElementById('modal-cust-products-tbody').innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Nenhum produto comprado</p></div></td></tr>';
+  }
+}
+
+async function openOrderModal(orderId) {
+  const modal = document.getElementById('order-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  
+  // Find order
+  let o = S.pedidos.find(x => String(x.id) === String(orderId));
+  if (!o) {
+    const { data, error } = await supabase
+      .from('pedidos')
+      .select('*')
+      .eq('id', orderId)
+      .eq('empresa_id', S.empresa.id)
+      .single();
+    if (data) {
+      o = data;
+    } else {
+      alert('Pedido não encontrado.');
+      return;
+    }
+  }
+  
+  document.getElementById('modal-order-id').textContent = o.id;
+  document.getElementById('modal-order-client').textContent = o.cliente_nome || '-';
+  document.getElementById('modal-order-date').textContent = fmtDate(o.data);
+  document.getElementById('modal-order-origin').textContent = o.origem || '-';
+  document.getElementById('modal-order-payment').textContent = o.plano_pagamento || '-';
+  document.getElementById('modal-order-carrier').textContent = o.transportadora || '-';
+  document.getElementById('modal-order-status').textContent = o.status || '-';
+  document.getElementById('modal-order-tracking').value = o.codigo_rastreio || '';
+  document.getElementById('modal-order-notes').value = o.observacoes || '';
+  
+  const itemsTb = document.getElementById('modal-order-items-tbody');
+  if (o.itens && o.itens.length > 0) {
+    itemsTb.innerHTML = o.itens.map(it => {
+      const p = S.produtos.find(x => String(x.id) === String(it.productId));
+      const qty = parseFloat(it.quantity || 0);
+      const price = parseFloat(it.sellPrice || 0);
+      const total = qty * price;
+      return `<tr>
+        <td>${it.productId}</td>
+        <td style="font-weight:500">${p ? p.nome : 'Produto ' + it.productId}</td>
+        <td>${qty}</td>
+        <td>${fmtMoney(price)}</td>
+        <td>${fmtMoney(total)}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    itemsTb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Sem itens no pedido</p></div></td></tr>';
+  }
+  
+  const saveBtn = document.getElementById('btn-save-order-details');
+  saveBtn.onclick = async () => {
+    const tracking = document.getElementById('modal-order-tracking').value.trim();
+    const notes = document.getElementById('modal-order-notes').value.trim();
+    
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="ti ti-loader"></i> Salvando...';
+    
+    try {
+      const { error } = await supabase
+        .from('pedidos')
+        .update({ codigo_rastreio: tracking, observacoes: notes })
+        .eq('id', orderId)
+        .eq('empresa_id', S.empresa.id);
+      if (error) throw error;
+      
+      o.codigo_rastreio = tracking;
+      o.observacoes = notes;
+      
+      const local = S.pedidos.find(x => String(x.id) === String(orderId));
+      if (local) {
+        local.codigo_rastreio = tracking;
+        local.observacoes = notes;
+      }
+      
+      alert('Pedido atualizado com sucesso!');
+      modal.style.display = 'none';
+      renderPedidos();
+      renderRecentActivities();
+    } catch(err) {
+      alert('Erro ao salvar: ' + err.message);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar Alterações';
+    }
+  };
+}
+
+async function loadPredictionsTab() {
+  const listContainer = document.getElementById('pred-list');
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '<div class="empty-state"><i class="ti ti-loader"></i><p>Calculando previsões...</p></div>';
+  
+  const today = new Date();
+  const startLimit = new Date();
+  startLimit.setDate(today.getDate() - 10);
+  const startLimitStr = startLimit.toISOString().split('T')[0];
+  
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('id, nome, score, segmento, ultima_compra, proxima_compra_prevista, dias_sem_compra, quantidade_pedidos, valor_total_compras')
+    .eq('empresa_id', S.empresa.id)
+    .gte('proxima_compra_prevista', startLimitStr)
+    .order('proxima_compra_prevista', { ascending: true })
+    .limit(10);
+    
+  if (error || !data || data.length === 0) {
+    listContainer.innerHTML = '<div class="empty-state"><i class="ti ti-brain"></i><p>Sem compras iminentes previstas</p></div>';
+    return;
+  }
+  
+  listContainer.innerHTML = data.map(c => {
+    const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low';
+    const dateStr = fmtDate(c.proxima_compra_prevista);
+    const diffDays = Math.ceil((new Date(c.proxima_compra_prevista) - today) / (1000 * 60 * 60 * 24));
+    let badgeText = '';
+    let badgeCls = '';
+    
+    if (diffDays < 0) {
+      badgeText = `Atrasado ${Math.abs(diffDays)}d`;
+      badgeCls = 'badge-danger';
+    } else if (diffDays === 0) {
+      badgeText = 'Hoje';
+      badgeCls = 'badge-warning';
+    } else {
+      badgeText = `Em ${diffDays}d`;
+      badgeCls = 'badge-success';
+    }
+    
+    return `<div class="clickable-row" onclick="window.openCustomerModal(${c.id})" style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:0.5px solid var(--border-color)">
+      <div style="width:32px; height:32px; border-radius:50%; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--border-focus); flex-shrink:0">
+        ${initials(c.nome)}
+      </div>
+      <div style="flex:1; min-width:0">
+        <div style="font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff">${c.nome || '-'}</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">Previsão: ${dateStr}</div>
+      </div>
+      <div style="flex-shrink:0; text-align:right">
+        <span class="badge ${badgeCls}" style="margin-bottom:4px">${badgeText}</span>
+        <div class="score-bar" style="display:block"><div class="${cl}" style="width:${c.score || 0}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTopSellingProducts() {
+  const container = document.getElementById('prod-rec-list');
+  if (!container) return;
+  const list = S.produtos.slice(0, 5);
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>Sem dados</p></div>';
+    return;
+  }
+  container.innerHTML = list.map(p => 
+    `<div style="padding:10px 0; border-bottom:0.5px solid var(--border-color); display:flex; justify-content:space-between; align-items:center">
+      <div>
+        <div style="font-size:13px; font-weight:500; color:#fff">${p.nome}</div>
+        <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">${p.categoria_nome || 'Sem categoria'}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px; font-weight:600; color:var(--border-focus)">${p.quantidade_vendida || 0}</div>
+        <div style="font-size:10px; color:var(--text-tertiary)">vendas</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function setupModalTabs() {
+  const tabs = [
+    { btn: 'tab-btn-cust-info', content: 'tab-cust-info' },
+    { btn: 'tab-btn-cust-orders', content: 'tab-cust-orders' },
+    { btn: 'tab-btn-cust-products', content: 'tab-cust-products' }
+  ];
+  tabs.forEach(t => {
+    const btnEl = document.getElementById(t.btn);
+    if (btnEl) {
+      btnEl.onclick = () => {
+        tabs.forEach(x => {
+          document.getElementById(x.btn).classList.remove('active');
+          document.getElementById(x.content).style.display = 'none';
+        });
+        btnEl.classList.add('active');
+        document.getElementById(t.content).style.display = 'block';
+      };
+    }
+  });
+}
+
+window.openCustomerModal = openCustomerModal;
+window.openOrderModal = openOrderModal;
 }
 
 // ============================================================
@@ -1551,6 +2222,9 @@ document.getElementById('cli-filter').addEventListener('change', renderClientes)
 document.getElementById('ped-search').addEventListener('input', renderPedidos)
 document.getElementById('ped-status').addEventListener('change', renderPedidos)
 document.getElementById('prod-search').addEventListener('input', renderProdutos)
+document.getElementById('btn-filter-dash').addEventListener('click', loadDashboard)
+document.getElementById('btn-close-cust-modal').addEventListener('click', () => { document.getElementById('customer-modal').style.display = 'none'; })
+document.getElementById('btn-close-order-modal').addEventListener('click', () => { document.getElementById('order-modal').style.display = 'none'; })
 
 // Verificar sessao ao carregar
 try {
@@ -1569,5 +2243,118 @@ try {
 
 })(); // fim IIFE
 </script>
+<!-- MODAL DETALHES DO CLIENTE -->
+<div id="customer-modal" class="modal-overlay" style="display:none">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-cust-name">-</h2>
+      <button class="modal-close-btn" id="btn-close-cust-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-btn-cust-info">Perfil & Predições</button>
+        <button class="modal-tab" id="tab-btn-cust-orders">Histórico de Pedidos</button>
+        <button class="modal-tab" id="tab-btn-cust-products">Produtos Comprados</button>
+      </div>
+      
+      <div class="modal-tab-content active" id="tab-cust-info">
+        <div class="modal-grid-2">
+          <div class="card" style="margin:0">
+            <div class="section-title">Dados do Perfil</div>
+            <p><strong>CNPJ:</strong> <span id="modal-cust-cnpj">-</span></p>
+            <p><strong>Cidade/Estado:</strong> <span id="modal-cust-city">-</span></p>
+            <p><strong>Telefone:</strong> <span id="modal-cust-phone">-</span></p>
+            <p><strong>Email:</strong> <span id="modal-cust-email">-</span></p>
+            <p><strong>RCA (Vendedor):</strong> <span id="modal-cust-seller">-</span></p>
+            <p><strong>Status do Cadastro:</strong> <span id="modal-cust-status">-</span></p>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="section-title">Indicadores de Compra</div>
+            <p><strong>Pedidos Realizados:</strong> <span id="modal-cust-total-orders">0</span></p>
+            <p><strong>Valor Total Comprado:</strong> <span id="modal-cust-total-spend">R$ 0,00</span></p>
+            <p><strong>Ticket Médio:</strong> <span id="modal-cust-avg-ticket">R$ 0,00</span></p>
+            <p><strong>Última Compra em:</strong> <span id="modal-cust-last-date">-</span></p>
+            <p><strong>Dias sem Comprar:</strong> <span id="modal-cust-dias-sem-compra">-</span></p>
+          </div>
+        </div>
+        <div class="card" style="margin:16px 0 0 0; background:rgba(36, 180, 126, 0.05); border-color:rgba(36, 180, 126, 0.2)">
+          <div class="section-title" style="color:#24b47e; display:flex; align-items:center; gap:8px"><i class="ti ti-brain"></i> Análise de Comportamento & Predições</div>
+          <div class="modal-grid-2" style="margin-top:12px; margin-bottom:0">
+            <div>
+              <p><strong>Propensão de Churn:</strong> <span id="modal-cust-churn-risk">-</span></p>
+              <p><strong>Próxima Compra Prevista:</strong> <span id="modal-cust-next-date">-</span></p>
+              <p><strong>Frequência Média (Ciclo):</strong> A cada <span id="modal-cust-cycle">-</span> dias</p>
+            </div>
+            <div>
+              <div style="font-weight:600; font-size:12px; color:#fafafa; margin-bottom:6px">Produtos com Potencial de Venda (Cross-Sell)</div>
+              <div id="modal-cust-recs" style="font-size:12px; color:#a1a1aa; line-height:1.6">Calculando recomendações...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-tab-content" id="tab-cust-orders" style="display:none">
+        <div class="card" style="margin:0; padding:0; overflow:hidden">
+          <table style="width:100%">
+            <thead><tr><th>Pedido</th><th>Data</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="modal-cust-orders-tbody"><tr><td colspan="4"><div class="empty-state"><p>Nenhum pedido registrado</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div class="modal-tab-content" id="tab-cust-products" style="display:none">
+        <div class="card" style="margin:0; padding:0; overflow:hidden">
+          <table style="width:100%">
+            <thead><tr><th>Cód.</th><th>Produto</th><th>Quantidade</th><th>Gasto Estimado</th></tr></thead>
+            <tbody id="modal-cust-products-tbody"><tr><td colspan="4"><div class="empty-state"><p>Nenhum produto comprado</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHES DO PEDIDO -->
+<div id="order-modal" class="modal-overlay" style="display:none; z-index:1010">
+  <div class="modal-content" style="max-width:700px">
+    <div class="modal-header">
+      <h2>Pedido #<span id="modal-order-id">-</span></h2>
+      <button class="modal-close-btn" id="btn-close-order-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid-2">
+        <div class="card" style="margin:0">
+          <div class="section-title">Detalhes do Pedido</div>
+          <p><strong>Cliente:</strong> <span id="modal-order-client">-</span></p>
+          <p><strong>Data:</strong> <span id="modal-order-date">-</span></p>
+          <p><strong>Origem de Venda:</strong> <span id="modal-order-origin">-</span></p>
+          <p><strong>Plano de Pagamento:</strong> <span id="modal-order-payment">-</span></p>
+          <p><strong>Transportadora:</strong> <span id="modal-order-carrier">-</span></p>
+          <p><strong>Status do Pedido:</strong> <span id="modal-order-status">-</span></p>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="section-title">Gestão do Pedido</div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px; display:block; margin-bottom:4px; color:#a1a1aa; font-weight:500">Código de Rastreio:</label>
+            <input type="text" id="modal-order-tracking" placeholder="Ex: BR123456789BR" style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid #27272a; background:#09090b; color:#fafafa; font-size:13px">
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px; display:block; margin-bottom:4px; color:#a1a1aa; font-weight:500">Observações Internas:</label>
+            <textarea id="modal-order-notes" placeholder="Adicione observações para este pedido..." style="width:100%; height:75px; padding:8px 12px; border-radius:8px; border:1px solid #27272a; background:#09090b; color:#fafafa; font-size:13px; resize:none"></textarea>
+          </div>
+          <button class="btn" id="btn-save-order-details" style="width:100%; background:#24b47e; color:#fff; border:none; padding:10px; font-weight:600; border-radius:8px; cursor:pointer"><i class="ti ti-device-floppy"></i> Salvar Alterações</button>
+        </div>
+      </div>
+      <div class="card" style="margin:16px 0 0 0; padding:0; overflow:hidden">
+        <div class="section-title" style="padding:16px 16px 8px 16px; margin:0">Itens do Pedido</div>
+        <table style="width:100%">
+          <thead><tr><th>Cód.</th><th>Produto</th><th>Qtd.</th><th>Preço Un.</th><th>Total</th></tr></thead>
+          <tbody id="modal-order-items-tbody"><tr><td colspan="5">Sem itens</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

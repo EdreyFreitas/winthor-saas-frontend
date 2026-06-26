@@ -1,7 +1,9 @@
--- ============================================================
--- SQL DE ATUALIZACAO - WINTHOR SAAS
--- Execute este script no editor SQL do Supabase
--- ============================================================
+-- Indices necessarios para otimizacao de performance
+CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_empresa ON public.pedidos(cliente_id, empresa_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_data ON public.pedidos(data);
+
+-- Remover restricoes desnecessarias que possam quebrar a sincronizacao de historicos legados
+ALTER TABLE public.pedidos DROP CONSTRAINT IF EXISTS pedidos_cliente_id_fkey;
 
 CREATE OR REPLACE FUNCTION public.atualizar_estatisticas_clientes()
 RETURNS void AS $$
@@ -16,13 +18,14 @@ BEGIN
   FROM (
     SELECT 
       cliente_id, 
+      empresa_id,
       COUNT(id) as qtd_pedidos,
       SUM(total) as val_compras,
       MAX(data) as max_date
     FROM public.pedidos
-    GROUP BY cliente_id
+    GROUP BY cliente_id, empresa_id
   ) p
-  WHERE c.id = p.cliente_id;
+  WHERE c.id = p.cliente_id AND c.empresa_id = p.empresa_id;
 
   -- 2. Zera as estatísticas dos clientes que não possuem pedidos
   UPDATE public.clientes c
@@ -32,7 +35,8 @@ BEGIN
     ultima_compra = NULL,
     dias_sem_compra = NULL
   WHERE NOT EXISTS (
-    SELECT 1 FROM public.pedidos p WHERE p.cliente_id = c.id
+    SELECT 1 FROM public.pedidos p 
+    WHERE p.cliente_id = c.id AND p.empresa_id = c.empresa_id
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

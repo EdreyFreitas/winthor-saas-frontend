@@ -48,6 +48,15 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    let body: any = {}
+    if (req.method === 'POST') {
+      try {
+        body = await req.json()
+      } catch (_) {
+        // Ignora se nao for JSON valido
+      }
+    }
+
     const { data: empresas, error: errEmpresas } = await supabase
       .from('empresas')
       .select('id, winthor_url, winthor_login, winthor_senha, winthor_filial')
@@ -63,7 +72,7 @@ Deno.serve(async (req) => {
 
     const resultados = []
     for (const empresa of empresas) {
-      const resultado = await syncEmpresa(supabase, empresa)
+      const resultado = await syncEmpresa(supabase, empresa, body)
       resultados.push(resultado)
     }
 
@@ -139,9 +148,78 @@ async function fetchAllPages(
 }
 
 // ============================================================
+// HELPER: busca uma unica pagina (para sync historico paginado)
+// ============================================================
+async function fetchPage(
+  baseUrl: string,
+  endpoint: string,
+  token: string,
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, any> = {},
+  timeoutMs = 30000
+): Promise<{ items: any[], hasNext: boolean }> {
+  const url = new URL(`${baseUrl}${endpoint}`)
+  const params: Record<string, any> = { ...extraParams, page, pageSize }
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v))
+  })
+
+  const res = await fetchWithTimeout(url.toString(), {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }, timeoutMs)
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Erro ${res.status} em ${endpoint} pagina ${page}: ${body.substring(0, 300)}`)
+  }
+
+  const raw = await res.json()
+  if (Array.isArray(raw)) {
+    return { items: raw, hasNext: false }
+  }
+
+  const items: any[] = raw.items || raw.data || raw.content || []
+  return { items, hasNext: !!raw.hasNext }
+}
+
+// ============================================================
+// HELPER: salva pedidos em lotes menores no banco de dados
+// para evitar erros de statement timeout do Postgres
+// ============================================================
+async function upsertPedidosInBatches(supabase: any, pedidos: any[], batchSize = 200) {
+  const uniqueMap = new Map()
+  pedidos.forEach((item: any) => uniqueMap.set(item.id, item))
+  const uniqueLote = Array.from(uniqueMap.values())
+
+  for (let k = 0; k < uniqueLote.length; k += batchSize) {
+    const dbSubLote = uniqueLote.slice(k, k + batchSize)
+    const { error: upsertErr } = await supabase
+      .from('pedidos')
+      .upsert(dbSubLote, { onConflict: 'id' })
+    if (upsertErr) {
+      throw new Error(`Erro ao salvar sub-lote de pedidos: ${upsertErr.message}`)
+    }
+  }
+  return uniqueLote.length
+}
+
+// ============================================================
 // SYNC PRINCIPAL POR EMPRESA
 // ============================================================
-async function syncEmpresa(supabase: any, empresa: any) {
+async function syncEmpresa(
+  supabase: any,
+  empresa: any,
+  options: {
+    action?: string;
+    daysOfSearch?: number;
+    page?: number;
+    branchId?: string;
+  } = {}
+) {
   const inicio = Date.now()
   const detalhes: string[] = []
   // Filial padrao "1,2,3,4,5,6" se nao configurada
@@ -161,6 +239,20 @@ async function syncEmpresa(supabase: any, empresa: any) {
   try {
     const baseUrl = empresa.winthor_url.replace(/\/$/, '')
     detalhes.push(`Empresa ${empresa.id} | Filial: ${filialId}`)
+
+    // Se for acao de atualizar_estatisticas, faz o RPC e encerra
+    if (options.action === 'atualizar_estatisticas') {
+      detalhes.push('Atualizando estatísticas de todos os clientes...')
+      const { error: errRpc } = await supabase.rpc('atualizar_estatisticas_clientes')
+      if (errRpc) {
+        throw new Error(`Erro ao rodar RPC estatisticas: ${errRpc.message}`)
+      }
+      return {
+        success: true,
+        message: 'Estatisticas atualizadas com sucesso',
+        detalhes
+      }
+    }
 
     // ── 1. LOGIN ──────────────────────────────────────────────
     detalhes.push('Autenticando no Winthor...')
@@ -183,6 +275,74 @@ async function syncEmpresa(supabase: any, empresa: any) {
       throw new Error(`Token nao encontrado na resposta do login: ${JSON.stringify(loginData).substring(0, 200)}`)
     }
     detalhes.push('Login OK. Token obtido.')
+
+    // Se for acao de sync_history_page, faz a busca especifica de pagina de pedidos e encerra
+    if (options.action === 'sync_history_page') {
+      const page = options.page || 1
+      const branchId = options.branchId
+      const daysOfSearch = options.daysOfSearch || 2010
+      const pageSize = 1000
+
+      if (!branchId) {
+        throw new Error('branchId e obrigatorio para sync_history_page')
+      }
+
+      detalhes.push(`Historico: Filial ${branchId} | Pagina ${page} | Dias: ${daysOfSearch}`)
+
+      const { items: pedidosRaw, hasNext } = await fetchPage(
+        baseUrl,
+        '/api/wholesale/v1/orders/list',
+        token,
+        page,
+        pageSize,
+        {
+          branchId: branchId,
+          daysOfSearch: daysOfSearch,
+          order: 'lastChange',
+          saleOrigin: 'T'
+        },
+        120000 // 120 segundos de timeout para evitar abortos em consultas longas
+      )
+
+      detalhes.push(`Pedidos recebidos na pagina ${page}: ${pedidosRaw.length}`)
+
+      if (pedidosRaw.length > 0) {
+        const lote = pedidosRaw.map((p: any) => ({
+          id: p.orderId,
+          empresa_id: empresa.id,
+          cliente_id: p.customer?.id,
+          cliente_nome: p.customer?.tradeName || p.customerName,
+          data: p.createData
+            ? new Date(p.createData).toISOString().split('T')[0]
+            : null,
+          status: p.orderStatus,
+          total: parseFloat(String(p.totalValue || 0)),
+          itens: p.listOfOrderItem || [],
+          transportadora: String(p.carrierId || ''),
+          plano_pagamento: String(p.paymentPlanId || ''),
+          origem: p.saleOrigin || 'W'
+        })).filter((p: any) => p.id && p.cliente_id)
+
+        if (lote.length > 0) {
+          const insertedCount = await upsertPedidosInBatches(supabase, lote, 200)
+          log.pedidos_novos = insertedCount
+          detalhes.push(`Salvos com sucesso: ${insertedCount} pedidos`)
+        }
+      }
+
+      log.duracao_segundos = Math.floor((Date.now() - inicio) / 1000)
+      log.erro_msg = detalhes.join(' | ')
+      
+      // Salva no log_sync
+      await supabase.from('log_sync').insert(log)
+
+      return {
+        success: true,
+        count: log.pedidos_novos,
+        hasNext,
+        detalhes
+      }
+    }
 
     const clientesRaw = await fetchAllPages(
       baseUrl,
@@ -281,21 +441,13 @@ async function syncEmpresa(supabase: any, empresa: any) {
         })).filter((p: any) => p.id && p.cliente_id)
 
         if (lote.length > 0) {
-          // Deduplica o lote para evitar erro "ON CONFLICT DO UPDATE command cannot affect row a second time"
-          const uniqueMap = new Map()
-          lote.forEach((item: any) => uniqueMap.set(item.id, item))
-          const uniqueLote = Array.from(uniqueMap.values())
-
           promessas.push(
-            supabase
-              .from('pedidos')
-              .upsert(uniqueLote, { onConflict: 'id' })
-              .then(({ error }: any) => {
-                if (error) {
-                  detalhes.push(`ERRO pedidos lote ${i}: ${error.message}`)
-                } else {
-                  log.pedidos_novos += uniqueLote.length
-                }
+            upsertPedidosInBatches(supabase, lote, 200)
+              .then((insertedCount) => {
+                log.pedidos_novos += insertedCount
+              })
+              .catch((err) => {
+                detalhes.push(`ERRO pedidos lote ${i}: ${err.message}`)
               })
           )
         }
