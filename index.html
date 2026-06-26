@@ -807,6 +807,102 @@ tr:hover td {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Multiselect RCA styles */
+.multiselect-container {
+  position: relative;
+  min-width: 200px;
+  flex: 1;
+}
+.multiselect-btn {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  font-size: 14px;
+  background: var(--bg-secondary);
+  color: #fff;
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition-smooth);
+}
+.multiselect-btn:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  background: var(--bg-primary);
+}
+.multiselect-btn::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #a1a1aa;
+  margin-left: 8px;
+}
+.multiselect-dropdown {
+  display: none;
+  position: absolute;
+  top: 105%;
+  left: 0;
+  z-index: 1000;
+  width: 320px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+.multiselect-dropdown.show {
+  display: block;
+}
+.supervisor-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 12px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+}
+.rca-option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.rca-option-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.rca-option-item input {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+/* Date range inputs style inside date group */
+.date-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 250px;
+}
+.date-filter-group input[type="date"] {
+  flex: 1;
+  min-width: 100px;
+}
 </style>
 </head>
 <body>
@@ -949,13 +1045,44 @@ tr:hover td {
 
 <!-- PEDIDOS -->
 <div class="page" id="page-pedidos">
-  <div class="search-bar">
-    <input type="text" id="ped-search" placeholder="Numero do pedido ou cliente...">
-    <select id="ped-status"><option value="">Todos</option><option value="C">Confirmado</option><option value="L">Liberado</option><option value="F">Faturado</option></select>
+  <div class="search-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
+    <input type="text" id="ped-search" placeholder="Numero do pedido ou cliente..." style="flex:1; min-width:200px">
+    
+    <!-- Filtro por RCA (Multiselect) -->
+    <div class="multiselect-container" id="rca-multiselect">
+      <button type="button" class="multiselect-btn" id="rca-select-btn">RCA: Todos</button>
+      <div class="multiselect-dropdown" id="rca-dropdown">
+        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center">
+          <button type="button" id="rca-select-all" style="font-size:11px; background:none; border:none; color:#24b47e; cursor:pointer; font-weight:600">Marcar Todos</button>
+          <button type="button" id="rca-clear-all" style="font-size:11px; background:none; border:none; color:#ef4444; cursor:pointer; font-weight:600">Desmarcar Todos</button>
+        </div>
+        <div class="multiselect-options" id="rca-options-container" style="max-height: 250px; overflow-y: auto; padding: 4px;">
+          <!-- JS populado -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Filtro por Período de Datas -->
+    <div class="date-filter-group">
+      <span style="font-size:12px; color:#a1a1aa">De:</span>
+      <input type="date" id="ped-date-start">
+      <span style="font-size:12px; color:#a1a1aa">Até:</span>
+      <input type="date" id="ped-date-end">
+    </div>
+
+    <select id="ped-status" style="width:140px; flex:none">
+      <option value="">Status: Todos</option>
+      <option value="P">Pendente</option>
+      <option value="M">Montado</option>
+      <option value="B">Bloqueado</option>
+      <option value="C">Cancelado</option>
+      <option value="F">Faturado</option>
+      <option value="L">Liberado</option>
+    </select>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-    <table><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th></tr></thead>
-    <tbody id="ped-tbody"><tr><td colspan="5"><div class="empty-state"><i class="ti ti-file-invoice"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <table><thead><tr><th>Pedido</th><th>Cliente</th><th>RCA</th><th>Supervisor</th><th>Data</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody id="ped-tbody"><tr><td colspan="7"><div class="empty-state"><i class="ti ti-file-invoice"></i><p>Carregando...</p></div></td></tr></tbody></table>
   </div>
 </div>
 
@@ -1197,6 +1324,8 @@ tr:hover td {
         <div class="card" style="margin:0">
           <div class="section-title">Detalhes do Pedido</div>
           <p><strong>Cliente:</strong> <span id="modal-order-client">-</span></p>
+          <p><strong>RCA:</strong> <span id="modal-order-rca">-</span></p>
+          <p><strong>Supervisor:</strong> <span id="modal-order-supervisor">-</span></p>
           <p><strong>Data:</strong> <span id="modal-order-date">-</span></p>
           <p><strong>Origem de Venda:</strong> <span id="modal-order-origin">-</span></p>
           <p><strong>Plano de Pagamento:</strong> <span id="modal-order-payment">-</span></p>
@@ -1253,6 +1382,148 @@ try {
 }
 
 // ============================================================
+// DICIONARIOS E MAPEAMENTOS (WinThor)
+// ============================================================
+const SUPERVISORES = {
+  "1": "DENTAL VIDAFARMA ITZ",
+  "2": "DENTAL VIDAFARMA SLZ",
+  "3": "DENTAL VIDAFARMA PALMAS",
+  "4": "LICITAÇÕES",
+  "5": "ECOMMERCE",
+  "6": "DENTAL VIDAFARMA SLZ COHATRAC",
+  "7": "DENTAL VIDAFARMA SLZ MONUMENTAL",
+  "11": "DENTAL VIDAFARMA BELÉM"
+};
+
+const RCAS = {
+  "1": { nome: "DENTAL VIDAFARMA ITZ", supervisorId: "1" },
+  "14": { nome: "PATRICIA DE SOUSA RODRI", supervisorId: "1" },
+  "17": { nome: "ARYANA CARVALHO DE SO", supervisorId: "1" },
+  "18": { nome: "EDNARDO DIAS RIBEIRO", supervisorId: "1" },
+  "20": { nome: "GILDILENE GONCALVES NA", supervisorId: "1" },
+  "25": { nome: "JARMESSON GABRIEL SILV", supervisorId: "1" },
+  "28": { nome: "RODOLPHO MAX SANTOS C", supervisorId: "1" },
+  "34": { nome: "ANDREIA CRISTINA MOREIR", supervisorId: "1" },
+  "35": { nome: "LEONARDO AZEVEDO", supervisorId: "1" },
+  "37": { nome: "MISIA DO NASCIMENTO FRE", supervisorId: "1" },
+  "38": { nome: "PAULO HENRIQUE DA SILVA", supervisorId: "1" },
+  "39": { nome: "ANA CAROLINE COSTA RES", supervisorId: "1" },
+  "44": { nome: "ADRIANO RIOS", supervisorId: "1" },
+  "55": { nome: "BRENDA COSTA", supervisorId: "1" },
+  "63": { nome: "GUILHERME CRUZ SOUSA", supervisorId: "1" },
+  "65": { nome: "LUCAS FREITAS", supervisorId: "1" },
+  "73": { nome: "TELEMARKETING F1", supervisorId: "1" },
+  
+  "2": { nome: "DENTAL VIDAFARMA SLZ", supervisorId: "2" },
+  "11": { nome: "MARCOS VINICIUS", supervisorId: "2" },
+  "22": { nome: "CLEILTON ALVES ROCHA", supervisorId: "2" },
+  "24": { nome: "MARINA EVELYN CASTRO D", supervisorId: "2" },
+  "30": { nome: "GEISIANE COSTA RUFINO", supervisorId: "2" },
+  "31": { nome: "AMANDA FONTINELE GOUV", supervisorId: "2" },
+  "32": { nome: "SUELLEN RAQUEL AMBROS", supervisorId: "2" },
+  "36": { nome: "PAULA TAMIRIS ALVES RIBE", supervisorId: "2" },
+  "40": { nome: "FLAVIA KELLY PEREIRA FER", supervisorId: "2" },
+  "41": { nome: "RUTH DE JESUS COSTA SIL", supervisorId: "2" },
+  "42": { nome: "GUILHERME SOUSA AIRES", supervisorId: "2" },
+  "46": { nome: "SORAYA MIRTHES DOS SAN", supervisorId: "2" },
+  "47": { nome: "RAYSSA MARIA DA SILVA FO", supervisorId: "2" },
+  "48": { nome: "GLAUCE DANIELE SILVA", supervisorId: "2" },
+  "51": { nome: "MARIANA AMÁLIA CASTRO D", supervisorId: "2" },
+  "60": { nome: "VITORIA CRISTINE ROCHA C", supervisorId: "2" },
+  "66": { nome: "PAULA MILLENE ALVES RIB", supervisorId: "2" },
+  "68": { nome: "ANA PAULA FONTELES OLIV", supervisorId: "2" },
+  "74": { nome: "TELEMARKETING F2", supervisorId: "2" },
+  "80": { nome: "DAILON PINHEIRO", supervisorId: "2" },
+  "81": { nome: "RAISSA - RENASCENCA", supervisorId: "2" },
+  "82": { nome: "CLARA REANNE - RENASCE", supervisorId: "2" },
+  
+  "3": { nome: "DENTAL VIDAFARMA PALMA", supervisorId: "3" },
+  "19": { nome: "JUREMA GOMES BRITO", supervisorId: "3" },
+  "21": { nome: "ANDERSON DONIZETH", supervisorId: "3" },
+  "29": { nome: "ANA CAROLINE RIBEIRO SO", supervisorId: "3" },
+  "71": { nome: "GUSTAVO RIBEIRO DA COS", supervisorId: "3" },
+  "75": { nome: "TELEMARKETING F3", supervisorId: "3" },
+  "79": { nome: "DELCIMAR MELQUIADES", supervisorId: "3" },
+  
+  "23": { nome: "WILDEGLAN DA COSTA SOU", supervisorId: "4" },
+  "33": { nome: "LICITAÇÃO", supervisorId: "4" },
+  
+  "50": { nome: "E-COMMERCE SOUODONTO", supervisorId: "5" },
+  "56": { nome: "MATHEUS SOARES CARVAL", supervisorId: "5" },
+  "64": { nome: "LARA EMANUELA DA SILVA", supervisorId: "5" },
+  "72": { nome: "FELIPE SOUSA SILVA", supervisorId: "5" },
+  
+  "4": { nome: "DENTAL VIDAFARMA SLZ CO", supervisorId: "6" },
+  "26": { nome: "ALEXANDRA MARIA CASTRO", supervisorId: "6" },
+  "27": { nome: "JARDSON DINIZ DE ARAUJO", supervisorId: "6" },
+  "52": { nome: "SORAYA COHATRAC", supervisorId: "6" },
+  "76": { nome: "TELEMARKETING F4", supervisorId: "6" },
+  "84": { nome: "MARIANA - COHATRAC", supervisorId: "6" },
+  
+  "5": { nome: "DENTAL VIDAFARMA SLZ 2", supervisorId: "7" },
+  "53": { nome: "G. DANIELE SLZ 2 RENASCE", supervisorId: "7" },
+  "61": { nome: "CLARA REANNE - MONUMEN", supervisorId: "7" },
+  "70": { nome: "RAISSA - MONUMENTAL", supervisorId: "7" },
+  
+  "43": { nome: "ANA CLAUDIA SILVA DA CUN", supervisorId: "11" },
+  "45": { nome: "ADRIANO RIOS BELÉM", supervisorId: "11" },
+  "59": { nome: "DENTAL VIDAFARMA BELÉM", supervisorId: "11" },
+  "67": { nome: "FABYANE MOREIRA DUART", supervisorId: "11" },
+  "77": { nome: "TELEMARKETING F5", supervisorId: "11" },
+  "78": { nome: "ERIKA PATRICIA BRAZAO R", supervisorId: "11" },
+  "83": { nome: "PATRICIA BORGES", supervisorId: "11" }
+};
+
+const ORIGENS_PEDIDOS = {
+  "B": "Balcão",
+  "R": "Balcão Reserva",
+  "K": "Venda Broker",
+  "C": "Callcenter",
+  "F": "Força de Venda",
+  "T": "Telemarketing",
+  "W": "Venda WEB",
+  "A": "Auto Serviço (Varejo)"
+};
+
+const STATUS_PEDIDOS = {
+  "P": { label: "Pendente", class: "badge-gray" },
+  "M": { label: "Montado", class: "badge-warning" },
+  "B": { label: "Bloqueado", class: "badge-danger" },
+  "C": { label: "Cancelado", class: "badge-danger" },
+  "F": { label: "Faturado", class: "badge-success" },
+  "L": { label: "Liberado", class: "badge-info" }
+};
+
+const PLANOS_PAGAMENTO = {
+  "1": "1 - A Vista",
+  "2": "2 - 7 Dias",
+  "3": "3 - 14 Dias",
+  "4": "4 - 21 Dias",
+  "5": "5 - 28 Dias",
+  "6": "6 - 35 Dias",
+  "7": "7 - 42 Dias",
+  "8": "8 - 15 Dias",
+  "9": "9 - 30 Dias",
+  "10": "10 - 30/60 Dias",
+  "11": "11 - 30/60/90 Dias",
+  "12": "12 - 30/60/90/120 Dias",
+  "13": "13 - 45 Dias",
+  "14": "14 - 60 Dias",
+  "17": "17 - 10 Dias",
+  "21": "21 - 30/60/90/120/150 Dias",
+  "26": "26 - 25 Dias",
+  "27": "27 - 20 Dias",
+  "28": "28 - 40 Dias",
+  "29": "29 - 50 Dias",
+  "30": "30 - 60/90 Dias",
+  "31": "31 - 30/45/60 Dias",
+  "32": "32 - 45/60/75 Dias",
+  "33": "33 - 15/30 Dias",
+  "35": "35 - 7/14/21/28 Dias",
+  "99": "99 - Negociado"
+};
+
+// ============================================================
 // ESTADO
 // ============================================================
 const S = {
@@ -1279,6 +1550,7 @@ function showApp() {
   if (infoUser) infoUser.textContent = S.user?.nome || S.user?.email || '-';
   setupModalTabs();
   initDashboardDates();
+  initRcaFilter();
   loadAllData(); 
   setupRealtime(); 
 }
@@ -1698,25 +1970,57 @@ function renderClientes() {
 }
 
 function renderPedidos() {
-  const search = document.getElementById('ped-search').value.toLowerCase()
-  const status = document.getElementById('ped-status').value
+  const search = document.getElementById('ped-search').value.toLowerCase();
+  const status = document.getElementById('ped-status').value;
+  const dateStart = document.getElementById('ped-date-start').value;
+  const dateEnd = document.getElementById('ped-date-end').value;
+  
+  const rcaCheckboxes = document.querySelectorAll('.rca-checkbox');
+  const hasRcaFilter = rcaCheckboxes.length > 0;
+  const selectedRcas = Array.from(rcaCheckboxes).filter(cb => cb.checked).map(cb => String(cb.value));
+
   const list = S.pedidos.filter(p => {
-    if (search && !String(p.id).includes(search) && !(p.cliente_nome || '').toLowerCase().includes(search)) return false
-    if (status && p.status !== status) return false
-    return true
-  })
-  const tb = document.getElementById('ped-tbody')
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Nenhum pedido</p></div></td></tr>'; return }
+    // 1. Search filter
+    if (search && !String(p.id).includes(search) && !(p.cliente_nome || '').toLowerCase().includes(search)) return false;
+    
+    // 2. Status filter
+    if (status && p.status !== status) return false;
+    
+    // 3. Date range filter
+    if (dateStart && p.data < dateStart) return false;
+    if (dateEnd && p.data > dateEnd) return false;
+    
+    // 4. RCA filter
+    if (hasRcaFilter) {
+      const cliente = S.clientes.find(c => String(c.id) === String(p.cliente_id));
+      const vendedorId = cliente ? String(cliente.vendedor_id || '') : '';
+      if (!selectedRcas.includes(vendedorId)) return false;
+    }
+    
+    return true;
+  });
+
+  const tb = document.getElementById('ped-tbody');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido</p></div></td></tr>'; return; }
+
   tb.innerHTML = list.slice(0, 100).map(p => {
-    const statusMap = { C: 'badge-success', L: 'badge-info', F: 'badge-warning' }
+    const cliente = S.clientes.find(c => String(c.id) === String(p.cliente_id));
+    const rcaId = cliente ? String(cliente.vendedor_id || '') : '';
+    const rca = RCAS[rcaId];
+    const rcaDesc = rca ? `[${rcaId}] ${rca.nome}` : (rcaId ? `RCA ${rcaId}` : '-');
+    const supervisorDesc = rca ? (SUPERVISORES[rca.supervisorId] || '-') : '-';
+    const statusData = STATUS_PEDIDOS[p.status] || { label: p.status || '-', class: 'badge-gray' };
+    
     return `<tr class="clickable-row" onclick="window.openOrderModal(${p.id})">
       <td style="font-weight:600">#${p.id || '-'}</td>
       <td style="font-size:12px">${p.cliente_nome || '-'}</td>
+      <td style="font-size:12px">${rcaDesc}</td>
+      <td style="font-size:12px">${supervisorDesc}</td>
       <td style="font-size:12px">${fmtDate(p.data)}</td>
       <td style="font-size:12px">${fmtMoney(p.total)}</td>
-      <td><span class="badge ${statusMap[p.status] || 'badge-gray'}">${p.status || '-'}</span></td>
-    </tr>`
-  }).join('')
+      <td><span class="badge ${statusData.class}">${statusData.label}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 function renderProdutos() {
@@ -1938,7 +2242,14 @@ async function openCustomerModal(customerId) {
   document.getElementById('modal-cust-city').textContent = (c.cidade || '') + (c.estado ? ' / ' + c.estado : '');
   document.getElementById('modal-cust-phone').textContent = c.telefone || '-';
   document.getElementById('modal-cust-email').textContent = c.email || '-';
-  document.getElementById('modal-cust-seller').textContent = c.vendedor_nome ? `[${c.vendedor_id}] ${c.vendedor_nome}` : '-';
+  const rcaId = String(c.vendedor_id || '');
+  const rca = RCAS[rcaId];
+  const rcaDesc = rca ? `[${rcaId}] ${rca.nome}` : (rcaId ? `RCA ${rcaId}` : '-');
+  const supervisorDesc = rca ? (SUPERVISORES[rca.supervisorId] || '-') : '-';
+  document.getElementById('modal-cust-seller').innerHTML = `
+    <div>${rcaDesc}</div>
+    <div style="font-size:11px; color:var(--text-secondary); margin-top:2px">Supervisor: ${supervisorDesc}</div>
+  `;
   document.getElementById('modal-cust-status').innerHTML = c.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>';
   
   // Purchase indicators
@@ -2066,13 +2377,23 @@ async function openOrderModal(orderId) {
     }
   }
   
+  const cliente = S.clientes.find(c => String(c.id) === String(o.cliente_id));
+  const rcaId = cliente ? String(cliente.vendedor_id || '') : '';
+  const rca = RCAS[rcaId];
+  const rcaDesc = rca ? `[${rcaId}] ${rca.nome}` : (rcaId ? `RCA ${rcaId}` : '-');
+  const supervisorDesc = rca ? (SUPERVISORES[rca.supervisorId] || '-') : '-';
+
   document.getElementById('modal-order-id').textContent = o.id;
   document.getElementById('modal-order-client').textContent = o.cliente_nome || '-';
+  document.getElementById('modal-order-rca').textContent = rcaDesc;
+  document.getElementById('modal-order-supervisor').textContent = supervisorDesc;
   document.getElementById('modal-order-date').textContent = fmtDate(o.data);
-  document.getElementById('modal-order-origin').textContent = o.origem || '-';
-  document.getElementById('modal-order-payment').textContent = o.plano_pagamento || '-';
+  document.getElementById('modal-order-origin').textContent = ORIGENS_PEDIDOS[o.origem] || o.origem || '-';
+  document.getElementById('modal-order-payment').textContent = PLANOS_PAGAMENTO[o.plano_pagamento] || o.plano_pagamento || '-';
   document.getElementById('modal-order-carrier').textContent = o.transportadora || '-';
-  document.getElementById('modal-order-status').textContent = o.status || '-';
+  
+  const statusData = STATUS_PEDIDOS[o.status] || { label: o.status || '-', class: 'badge-gray' };
+  document.getElementById('modal-order-status').textContent = statusData.label;
   document.getElementById('modal-order-tracking').value = o.codigo_rastreio || '';
   document.getElementById('modal-order-notes').value = o.observacoes || '';
   
@@ -2215,6 +2536,105 @@ function renderTopSellingProducts() {
       </div>
     </div>`
   ).join('');
+}
+
+function initRcaFilter() {
+  const container = document.getElementById('rca-options-container');
+  if (!container) return;
+  
+  // Group RCAS by supervisorId
+  const grouped = {};
+  for (const [id, info] of Object.entries(RCAS)) {
+    const supId = info.supervisorId;
+    if (!grouped[supId]) {
+      grouped[supId] = [];
+    }
+    grouped[supId].push({ id, ...info });
+  }
+  
+  let html = '';
+  const supIds = Object.keys(SUPERVISORES).sort((a, b) => Number(a) - Number(b));
+  for (const supId of supIds) {
+    const supName = SUPERVISORES[supId] || `Supervisor ${supId}`;
+    const rcasInSup = grouped[supId] || [];
+    if (rcasInSup.length === 0) continue;
+    
+    html += `<div class="supervisor-group-title">${supId} - ${supName}</div>`;
+    
+    rcasInSup.sort((a, b) => Number(a.id) - Number(b.id));
+    for (const rca of rcasInSup) {
+      html += `
+        <label class="rca-option-item">
+          <input type="checkbox" class="rca-checkbox" value="${rca.id}" checked>
+          <span>[${rca.id}] ${rca.nome}</span>
+        </label>
+      `;
+    }
+  }
+  container.innerHTML = html;
+  
+  // Setup toggle & clicks
+  const selectBtn = document.getElementById('rca-select-btn');
+  const dropdown = document.getElementById('rca-dropdown');
+  if (selectBtn && dropdown) {
+    selectBtn.onclick = (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('show');
+    };
+    
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== selectBtn) {
+        dropdown.classList.remove('show');
+      }
+    });
+  }
+  
+  // Listeners on options container
+  container.onchange = (e) => {
+    if (e.target.classList.contains('rca-checkbox')) {
+      updateRcaBtnText();
+      renderPedidos();
+    }
+  };
+  
+  const selectAllBtn = document.getElementById('rca-select-all');
+  if (selectAllBtn) {
+    selectAllBtn.onclick = () => {
+      container.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
+      updateRcaBtnText();
+      renderPedidos();
+    };
+  }
+  
+  const clearAllBtn = document.getElementById('rca-clear-all');
+  if (clearAllBtn) {
+    clearAllBtn.onclick = () => {
+      container.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
+      updateRcaBtnText();
+      renderPedidos();
+    };
+  }
+  
+  updateRcaBtnText();
+}
+
+function updateRcaBtnText() {
+  const container = document.getElementById('rca-options-container');
+  const btn = document.getElementById('rca-select-btn');
+  if (!container || !btn) return;
+  const checkboxes = container.querySelectorAll('.rca-checkbox');
+  const checked = Array.from(checkboxes).filter(cb => cb.checked);
+  if (checked.length === checkboxes.length) {
+    btn.textContent = 'RCA: Todos';
+  } else if (checked.length === 0) {
+    btn.textContent = 'RCA: Nenhum';
+  } else if (checked.length === 1) {
+    const val = checked[0].value;
+    const rca = RCAS[val];
+    btn.textContent = `RCA: [${val}] ${rca ? rca.nome.split(' ')[0] : ''}`;
+  } else {
+    btn.textContent = `RCA: ${checked.length} selecionados`;
+  }
 }
 
 function setupModalTabs() {
@@ -2369,6 +2789,8 @@ document.getElementById('cli-search').addEventListener('input', renderClientes)
 document.getElementById('cli-filter').addEventListener('change', renderClientes)
 document.getElementById('ped-search').addEventListener('input', renderPedidos)
 document.getElementById('ped-status').addEventListener('change', renderPedidos)
+document.getElementById('ped-date-start').addEventListener('change', renderPedidos)
+document.getElementById('ped-date-end').addEventListener('change', renderPedidos)
 document.getElementById('prod-search').addEventListener('input', renderProdutos)
 document.getElementById('btn-filter-dash').addEventListener('click', loadDashboard)
 document.getElementById('btn-close-cust-modal').addEventListener('click', () => { document.getElementById('customer-modal').style.display = 'none'; })
