@@ -1219,8 +1219,8 @@ tr:hover td {
       <div class="card" style="margin:16px 0 0 0; padding:0; overflow:hidden">
         <div class="section-title" style="padding:16px 16px 8px 16px; margin:0">Itens do Pedido</div>
         <table style="width:100%">
-          <thead><tr><th>Cód.</th><th>Produto</th><th>Qtd.</th><th>Preço Un.</th><th>Total</th></tr></thead>
-          <tbody id="modal-order-items-tbody"><tr><td colspan="5">Sem itens</td></tr></tbody>
+          <thead><tr><th>Cód.</th><th>Produto</th><th>Marca</th><th>Qtd.</th><th>Preço Un.</th><th>Total</th></tr></thead>
+          <tbody id="modal-order-items-tbody"><tr><td colspan="6">Sem itens</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2085,16 +2085,18 @@ async function openOrderModal(orderId) {
       const qty = parseFloat(it.quantity || 0);
       const price = parseFloat(it.sellPrice || 0);
       const total = qty * price;
+      const brand = p ? (p.marca_nome || p.fornecedor || '-') : '-';
       return `<tr>
         <td>${it.productId}</td>
         <td style="font-weight:500">${p ? p.nome : 'Produto ' + it.productId}</td>
+        <td>${brand}</td>
         <td>${qty}</td>
         <td>${fmtMoney(price)}</td>
         <td>${fmtMoney(total)}</td>
       </tr>`;
     }).join('');
   } else {
-    itemsTb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>Sem itens no pedido</p></div></td></tr>';
+    itemsTb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Sem itens no pedido</p></div></td></tr>';
   }
   
   const saveBtn = document.getElementById('btn-save-order-details');
