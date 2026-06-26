@@ -1882,6 +1882,24 @@ function updateDashMetrics() {
 }
 
 // Detail Modal Functions
+async function ensureProductsLoaded(productIds) {
+  const missingIds = productIds.filter(id => !S.produtos.some(x => String(x.id) === String(id)));
+  if (missingIds.length > 0) {
+    try {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id, nome, categoria_nome, secao_nome, departamento_nome, marca_nome, fornecedor, ativo, preco')
+        .in('id', missingIds);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        S.produtos.push(...data);
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar nomes de produtos dinamicamente:', e);
+    }
+  }
+}
+
 async function openCustomerModal(customerId) {
   const modal = document.getElementById('customer-modal');
   if (!modal) return;
@@ -1994,6 +2012,8 @@ async function openCustomerModal(customerId) {
     const prodList = Object.values(prodMap).sort((a,b) => b.spend - a.spend);
     const prodTb = document.getElementById('modal-cust-products-tbody');
     if (prodList.length > 0) {
+      const ids = prodList.map(item => item.id).filter(Boolean);
+      await ensureProductsLoaded(ids);
       prodTb.innerHTML = prodList.map(item => {
         const p = S.produtos.find(x => String(x.id) === String(item.id));
         return `<tr>
@@ -2046,6 +2066,8 @@ async function openOrderModal(orderId) {
   
   const itemsTb = document.getElementById('modal-order-items-tbody');
   if (o.itens && o.itens.length > 0) {
+    const ids = o.itens.map(it => it.productId).filter(Boolean);
+    await ensureProductsLoaded(ids);
     itemsTb.innerHTML = o.itens.map(it => {
       const p = S.produtos.find(x => String(x.id) === String(it.productId));
       const qty = parseFloat(it.quantity || 0);
