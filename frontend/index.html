@@ -880,6 +880,11 @@ tr:hover td {
   font-size: 13px;
   cursor: pointer;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  box-sizing: border-box;
 }
 .rca-option-item:hover {
   background: rgba(255, 255, 255, 0.05);
@@ -888,6 +893,7 @@ tr:hover td {
   cursor: pointer;
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
 /* Date range inputs style inside date group */
@@ -1047,6 +1053,20 @@ tr:hover td {
   <div class="search-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
     <input type="text" id="ped-search" placeholder="Numero do pedido ou cliente..." style="flex:1; min-width:200px">
     
+    <!-- Filtro por Supervisor (Multiselect) -->
+    <div class="multiselect-container" id="supervisor-multiselect">
+      <button type="button" class="multiselect-btn" id="supervisor-select-btn">Supervisor: Todos</button>
+      <div class="multiselect-dropdown" id="supervisor-dropdown">
+        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center">
+          <button type="button" id="supervisor-select-all" style="font-size:11px; background:none; border:none; color:#24b47e; cursor:pointer; font-weight:600">Marcar Todos</button>
+          <button type="button" id="supervisor-clear-all" style="font-size:11px; background:none; border:none; color:#ef4444; cursor:pointer; font-weight:600">Desmarcar Todos</button>
+        </div>
+        <div class="multiselect-options" id="supervisor-options-container" style="max-height: 250px; overflow-y: auto; padding: 4px;">
+          <!-- JS populado -->
+        </div>
+      </div>
+    </div>
+
     <!-- Filtro por RCA (Multiselect) -->
     <div class="multiselect-container" id="rca-multiselect">
       <button type="button" class="multiselect-btn" id="rca-select-btn">RCA: Todos</button>
@@ -2538,8 +2558,9 @@ function renderTopSellingProducts() {
 }
 
 function initRcaFilter() {
-  const container = document.getElementById('rca-options-container');
-  if (!container) return;
+  const rcaContainer = document.getElementById('rca-options-container');
+  const supContainer = document.getElementById('supervisor-options-container');
+  if (!rcaContainer || !supContainer) return;
   
   // Group RCAS by supervisorId
   const grouped = {};
@@ -2551,70 +2572,180 @@ function initRcaFilter() {
     grouped[supId].push({ id, ...info });
   }
   
-  let html = '';
+  // 1. Populate Supervisor dropdown options
+  let supHtml = '';
   const supIds = Object.keys(SUPERVISORES).sort((a, b) => Number(a) - Number(b));
+  for (const supId of supIds) {
+    const supName = SUPERVISORES[supId] || `Supervisor ${supId}`;
+    supHtml += `
+      <label class="rca-option-item">
+        <input type="checkbox" class="supervisor-checkbox" value="${supId}" checked>
+        <span>[${supId}] ${supName}</span>
+      </label>
+    `;
+  }
+  supContainer.innerHTML = supHtml;
+  
+  // 2. Populate RCA dropdown options
+  let rcaHtml = '';
   for (const supId of supIds) {
     const supName = SUPERVISORES[supId] || `Supervisor ${supId}`;
     const rcasInSup = grouped[supId] || [];
     if (rcasInSup.length === 0) continue;
     
-    html += `<div class="supervisor-group-title">${supId} - ${supName}</div>`;
+    rcaHtml += `<div class="supervisor-group-title">${supId} - ${supName}</div>`;
     
     rcasInSup.sort((a, b) => Number(a.id) - Number(b.id));
     for (const rca of rcasInSup) {
-      html += `
+      rcaHtml += `
         <label class="rca-option-item">
-          <input type="checkbox" class="rca-checkbox" value="${rca.id}" checked>
+          <input type="checkbox" class="rca-checkbox" data-supervisor="${supId}" value="${rca.id}" checked>
           <span>[${rca.id}] ${rca.nome}</span>
         </label>
       `;
     }
   }
-  container.innerHTML = html;
+  rcaContainer.innerHTML = rcaHtml;
   
-  // Setup toggle & clicks
-  const selectBtn = document.getElementById('rca-select-btn');
-  const dropdown = document.getElementById('rca-dropdown');
-  if (selectBtn && dropdown) {
-    selectBtn.onclick = (e) => {
+  // 3. Setup toggle & click events for Supervisor dropdown
+  const supSelectBtn = document.getElementById('supervisor-select-btn');
+  const supDropdown = document.getElementById('supervisor-dropdown');
+  
+  // 4. Setup toggle & click events for RCA dropdown
+  const rcaSelectBtn = document.getElementById('rca-select-btn');
+  const rcaDropdown = document.getElementById('rca-dropdown');
+  
+  if (supSelectBtn && supDropdown) {
+    supSelectBtn.onclick = (e) => {
       e.stopPropagation();
-      dropdown.classList.toggle('show');
+      supDropdown.classList.toggle('show');
+      if (rcaDropdown) rcaDropdown.classList.remove('show');
     };
-    
-    document.addEventListener('click', (e) => {
-      if (!dropdown.contains(e.target) && e.target !== selectBtn) {
-        dropdown.classList.remove('show');
-      }
-    });
   }
   
-  // Listeners on options container
-  container.onchange = (e) => {
-    if (e.target.classList.contains('rca-checkbox')) {
+  if (rcaSelectBtn && rcaDropdown) {
+    rcaSelectBtn.onclick = (e) => {
+      e.stopPropagation();
+      rcaDropdown.classList.toggle('show');
+      if (supDropdown) supDropdown.classList.remove('show');
+    };
+  }
+  
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (supDropdown && !supDropdown.contains(e.target) && e.target !== supSelectBtn) {
+      supDropdown.classList.remove('show');
+    }
+    if (rcaDropdown && !rcaDropdown.contains(e.target) && e.target !== rcaSelectBtn) {
+      rcaDropdown.classList.remove('show');
+    }
+  });
+  
+  // 5. Handlers for Supervisor Checkbox changes
+  supContainer.onchange = (e) => {
+    if (e.target.classList.contains('supervisor-checkbox')) {
+      const supId = e.target.value;
+      const isChecked = e.target.checked;
+      
+      // Update all child RCAs
+      rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]`).forEach(cb => {
+        cb.checked = isChecked;
+      });
+      
       updateRcaBtnText();
+      updateSupervisorBtnText();
       renderPedidos();
     }
   };
   
-  const selectAllBtn = document.getElementById('rca-select-all');
-  if (selectAllBtn) {
-    selectAllBtn.onclick = () => {
-      container.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
+  // 6. Handlers for RCA Checkbox changes
+  rcaContainer.onchange = (e) => {
+    if (e.target.classList.contains('rca-checkbox')) {
+      const supId = e.target.getAttribute('data-supervisor');
+      
+      // Check if all RCAs under this supervisor are checked
+      const rcasOfSup = Array.from(rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]`));
+      const allChecked = rcasOfSup.every(cb => cb.checked);
+      
+      // Update supervisor checkbox
+      const supCb = supContainer.querySelector(`.supervisor-checkbox[value="${supId}"]`);
+      if (supCb) {
+        supCb.checked = allChecked;
+      }
+      
       updateRcaBtnText();
+      updateSupervisorBtnText();
+      renderPedidos();
+    }
+  };
+  
+  // 7. Select All / Clear All for Supervisors
+  const supSelectAll = document.getElementById('supervisor-select-all');
+  if (supSelectAll) {
+    supSelectAll.onclick = () => {
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = true);
+      rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
+      updateRcaBtnText();
+      updateSupervisorBtnText();
       renderPedidos();
     };
   }
   
-  const clearAllBtn = document.getElementById('rca-clear-all');
-  if (clearAllBtn) {
-    clearAllBtn.onclick = () => {
-      container.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
+  const supClearAll = document.getElementById('supervisor-clear-all');
+  if (supClearAll) {
+    supClearAll.onclick = () => {
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
+      rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
       updateRcaBtnText();
+      updateSupervisorBtnText();
+      renderPedidos();
+    };
+  }
+  
+  // 8. Select All / Clear All for RCAs
+  const rcaSelectAll = document.getElementById('rca-select-all');
+  if (rcaSelectAll) {
+    rcaSelectAll.onclick = () => {
+      rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = true);
+      updateRcaBtnText();
+      updateSupervisorBtnText();
+      renderPedidos();
+    };
+  }
+  
+  const rcaClearAll = document.getElementById('rca-clear-all');
+  if (rcaClearAll) {
+    rcaClearAll.onclick = () => {
+      rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
+      supContainer.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = false);
+      updateRcaBtnText();
+      updateSupervisorBtnText();
       renderPedidos();
     };
   }
   
   updateRcaBtnText();
+  updateSupervisorBtnText();
+}
+
+function updateSupervisorBtnText() {
+  const container = document.getElementById('supervisor-options-container');
+  const btn = document.getElementById('supervisor-select-btn');
+  if (!container || !btn) return;
+  const checkboxes = container.querySelectorAll('.supervisor-checkbox');
+  const checked = Array.from(checkboxes).filter(cb => cb.checked);
+  if (checked.length === checkboxes.length) {
+    btn.textContent = 'Supervisor: Todos';
+  } else if (checked.length === 0) {
+    btn.textContent = 'Supervisor: Nenhum';
+  } else if (checked.length === 1) {
+    const val = checked[0].value;
+    const name = SUPERVISORES[val] || '';
+    btn.textContent = `Supervisor: [${val}] ${name.split(' ')[0]}`;
+  } else {
+    btn.textContent = `Supervisor: ${checked.length} selecionados`;
+  }
 }
 
 function updateRcaBtnText() {
