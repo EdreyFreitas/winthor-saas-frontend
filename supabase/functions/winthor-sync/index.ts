@@ -8,7 +8,7 @@
 //   - Suporte a winthor_filial na tabela empresas
 // ============================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0'
+import { createClient } from 'npm:@supabase/supabase-js@2.39.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -276,6 +276,189 @@ async function syncEmpresa(
     }
     detalhes.push('Login OK. Token obtido.')
 
+    // Se for acao de inspect_product_api, busca informações auxiliares e um produto
+    if (options.action === 'inspect_product_api') {
+      const endpoints = {
+        departments: '/api/purchases/v1/productDepartments',
+        sections: '/api/purchases/v1/productSections',
+        categories: '/api/purchases/v1/productCategories',
+        brands: '/api/purchases/v1/productBrands',
+        alternative_sections: '/api/purchases/v1/sections',
+        alternative_categories: '/api/purchases/v1/categories',
+        alternative_brands: '/api/purchases/v1/brands'
+      }
+      
+      const results: Record<string, any> = {}
+      for (const [key, path] of Object.entries(endpoints)) {
+        try {
+          detalhes.push(`Tentando endpoint ${key}: ${path}`)
+          const res = await fetchWithTimeout(`${baseUrl}${path}?page=1&pageSize=3`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }, 10000)
+          
+          if (res.ok) {
+            results[key] = { success: true, status: res.status, data: await res.json() }
+          } else {
+            results[key] = { success: false, status: res.status, error: await res.text() }
+          }
+        } catch (e: any) {
+          results[key] = { success: false, error: e.message }
+        }
+      }
+      
+      return {
+        success: true,
+        results,
+        detalhes
+      }
+    }
+
+    // Se for acao de sync_products_only, faz a busca e mapeamento exclusivo de produtos
+    if (options.action === 'sync_products_only') {
+      detalhes.push('Iniciando sincronização exclusiva de produtos...')
+      
+      const departmentsMap = new Map<number, string>()
+      const sectionsMap = new Map<number, { name: string, deptId: number, deptName: string }>()
+      const categoriesMap = new Map<number, { name: string, secId: number, secName: string, deptId: number, deptName: string }>()
+      const brandsMap = new Map<number, string>()
+
+      try {
+        const depts = await fetchAllPages(baseUrl, '/api/purchases/v1/productDepartments', token)
+        depts.forEach((d: any) => {
+          if (d.id) departmentsMap.set(Number(d.id), String(d.name || ''))
+        })
+        detalhes.push(`Departamentos mapeados: ${departmentsMap.size}`)
+      } catch (e: any) {
+        detalhes.push(`Aviso ao buscar departamentos: ${e.message}`)
+      }
+
+      try {
+        const secs = await fetchAllPages(baseUrl, '/api/purchases/v1/productSections', token)
+        secs.forEach((s: any) => {
+          if (s.id) {
+            sectionsMap.set(Number(s.id), {
+              name: String(s.description || ''),
+              deptId: Number(s.department?.id || 0),
+              deptName: String(s.department?.name || '')
+            })
+          }
+        })
+        detalhes.push(`Seções mapeadas: ${sectionsMap.size}`)
+      } catch (e: any) {
+        detalhes.push(`Aviso ao buscar seções: ${e.message}`)
+      }
+
+      try {
+        const cats = await fetchAllPages(baseUrl, '/api/purchases/v1/productCategories', token)
+        cats.forEach((c: any) => {
+          if (c.id) {
+            categoriesMap.set(Number(c.id), {
+              name: String(c.name || c.description || ''),
+              secId: Number(c.sectionId || c.section?.id || 0),
+              secName: String(c.section?.description || ''),
+              deptId: Number(c.section?.department?.id || 0),
+              deptName: String(c.section?.department?.name || '')
+            })
+          }
+        })
+        detalhes.push(`Categorias mapeadas: ${categoriesMap.size}`)
+      } catch (e: any) {
+        detalhes.push(`Aviso ao buscar categorias: ${e.message}`)
+      }
+
+      try {
+        const brs = await fetchAllPages(baseUrl, '/api/purchases/v1/productBrands', token)
+        brs.forEach((b: any) => {
+          if (b.id) brandsMap.set(Number(b.id), String(b.name || ''))
+        })
+        detalhes.push(`Marcas mapeadas: ${brandsMap.size}`)
+      } catch (e: any) {
+        detalhes.push(`Aviso ao buscar marcas: ${e.message}`)
+      }
+
+      detalhes.push('Buscando produtos...')
+      const produtosRaw = await fetchAllPages(
+        baseUrl,
+        '/api/purchases/v1/products/',
+        token,
+        { callOrigin: 'W' }
+      )
+      detalhes.push(`Produtos recebidos da API: ${produtosRaw.length}`)
+
+      if (produtosRaw.length > 0) {
+        const BATCH = 1000
+        const promessas = []
+        for (let i = 0; i < produtosRaw.length; i += BATCH) {
+          const lote = produtosRaw.slice(i, i + BATCH).map((p: any) => {
+            const prodId = Number(p.id)
+            const catId = Number(p.categoryId || 0)
+            const secId = Number(p.sectionId || 0)
+            const deptId = Number(p.departmentId || 0)
+            const brId = Number(p.brandId || 0)
+
+            const resolvedBrandName = brandsMap.get(brId) || p.supplierDescription || String(p.supplierId || '')
+            const resolvedCatInfo = categoriesMap.get(catId)
+            const resolvedSecInfo = sectionsMap.get(secId)
+            
+            const categoriaNome = resolvedCatInfo?.name || p.categoryName || null
+            const secaoId = secId || resolvedCatInfo?.secId || null
+            const secaoNome = p.sectionName || resolvedSecInfo?.name || resolvedCatInfo?.secName || null
+            const departamentoId = deptId || resolvedSecInfo?.deptId || resolvedCatInfo?.deptId || null
+            const departamentoNome = resolvedSecInfo?.deptName || resolvedCatInfo?.deptName || departmentsMap.get(deptId) || null
+
+            return {
+              id: p.id,
+              empresa_id: empresa.id,
+              nome: p.name,
+              descricao: p.descriptionShort || p.description1,
+              categoria_id: String(catId || ''),
+              categoria_nome: categoriaNome,
+              secao_id: secaoId,
+              secao_nome: secaoNome,
+              secao: secaoNome,
+              departamento_id: departamentoId,
+              departamento_nome: departamentoNome,
+              marca_id: brId || null,
+              marca_nome: resolvedBrandName,
+              fornecedor: resolvedBrandName,
+              unidade: p.unity || 'UN',
+              ativo: p.isActive !== false && p.active !== false
+            }
+          }).filter((p: any) => p.id)
+
+          if (lote.length > 0) {
+            promessas.push(
+              supabase
+                .from('produtos')
+                .upsert(lote, { onConflict: 'id' })
+                .then(({ error }: any) => {
+                  if (error) {
+                    detalhes.push(`ERRO produtos lote ${i}: ${error.message}`)
+                  } else {
+                    log.produtos_novos += lote.length
+                  }
+                })
+            )
+          }
+        }
+        await Promise.all(promessas)
+        detalhes.push(`Produtos processados. Total: ${log.produtos_novos}`)
+      }
+
+      log.duracao_segundos = Math.floor((Date.now() - inicio) / 1000)
+      log.erro_msg = detalhes.join(' | ')
+      await supabase.from('log_sync').insert(log)
+
+      return {
+        success: true,
+        count: log.produtos_novos,
+        detalhes
+      }
+    }
+
     // Se for acao de sync_history_page, faz a busca especifica de pagina de pedidos e encerra
     if (options.action === 'sync_history_page') {
       const page = options.page || 1
@@ -457,6 +640,67 @@ async function syncEmpresa(
     }
 
     // ── 4. PRODUTOS ───────────────────────────────────────────
+    detalhes.push('Buscando tabelas auxiliares (departamentos, seções, categorias, marcas)...')
+    
+    const departmentsMap = new Map<number, string>()
+    const sectionsMap = new Map<number, { name: string, deptId: number, deptName: string }>()
+    const categoriesMap = new Map<number, { name: string, secId: number, secName: string, deptId: number, deptName: string }>()
+    const brandsMap = new Map<number, string>()
+
+    try {
+      const depts = await fetchAllPages(baseUrl, '/api/purchases/v1/productDepartments', token)
+      depts.forEach((d: any) => {
+        if (d.id) departmentsMap.set(Number(d.id), String(d.name || ''))
+      })
+      detalhes.push(`Departamentos mapeados: ${departmentsMap.size}`)
+    } catch (e: any) {
+      detalhes.push(`Aviso ao buscar departamentos: ${e.message}`)
+    }
+
+    try {
+      const secs = await fetchAllPages(baseUrl, '/api/purchases/v1/productSections', token)
+      secs.forEach((s: any) => {
+        if (s.id) {
+          sectionsMap.set(Number(s.id), {
+            name: String(s.description || ''),
+            deptId: Number(s.department?.id || 0),
+            deptName: String(s.department?.name || '')
+          })
+        }
+      })
+      detalhes.push(`Seções mapeadas: ${sectionsMap.size}`)
+    } catch (e: any) {
+      detalhes.push(`Aviso ao buscar seções: ${e.message}`)
+    }
+
+    try {
+      const cats = await fetchAllPages(baseUrl, '/api/purchases/v1/productCategories', token)
+      cats.forEach((c: any) => {
+        if (c.id) {
+          categoriesMap.set(Number(c.id), {
+            name: String(c.name || c.description || ''),
+            secId: Number(c.sectionId || c.section?.id || 0),
+            secName: String(c.section?.description || ''),
+            deptId: Number(c.section?.department?.id || 0),
+            deptName: String(c.section?.department?.name || '')
+          })
+        }
+      })
+      detalhes.push(`Categorias mapeadas: ${categoriesMap.size}`)
+    } catch (e: any) {
+      detalhes.push(`Aviso ao buscar categorias: ${e.message}`)
+    }
+
+    try {
+      const brs = await fetchAllPages(baseUrl, '/api/purchases/v1/productBrands', token)
+      brs.forEach((b: any) => {
+        if (b.id) brandsMap.set(Number(b.id), String(b.name || ''))
+      })
+      detalhes.push(`Marcas mapeadas: ${brandsMap.size}`)
+    } catch (e: any) {
+      detalhes.push(`Aviso ao buscar marcas: ${e.message}`)
+    }
+
     detalhes.push('Buscando produtos...')
     const produtosRaw = await fetchAllPages(
       baseUrl,
@@ -470,16 +714,43 @@ async function syncEmpresa(
       const BATCH = 1000
       const promessas = []
       for (let i = 0; i < produtosRaw.length; i += BATCH) {
-        const lote = produtosRaw.slice(i, i + BATCH).map((p: any) => ({
-          id: p.id,                                              // pcprodut.codprod
-          empresa_id: empresa.id,
-          nome: p.name,                                          // pcprodut.descricao
-          descricao: p.descriptionShort || p.description1,      // pcprodut.descricao1
-          categoria_id: String(p.categoryId || ''),              // pcprodut.codcategoria
-          fornecedor: p.supplierDescription || String(p.supplierId || ''),
-          unidade: p.unity || 'UN',                             // pcprodut.unidade
-          ativo: p.isActive !== false && p.active !== false      // ambos os campos conforme doc
-        })).filter((p: any) => p.id)
+        const lote = produtosRaw.slice(i, i + BATCH).map((p: any) => {
+          const prodId = Number(p.id)
+          const catId = Number(p.categoryId || 0)
+          const secId = Number(p.sectionId || 0)
+          const deptId = Number(p.departmentId || 0)
+          const brId = Number(p.brandId || 0)
+
+          // Resoluções de nomes
+          const resolvedBrandName = brandsMap.get(brId) || p.supplierDescription || String(p.supplierId || '')
+          const resolvedCatInfo = categoriesMap.get(catId)
+          const resolvedSecInfo = sectionsMap.get(secId)
+          
+          const categoriaNome = resolvedCatInfo?.name || p.categoryName || null
+          const secaoId = secId || resolvedCatInfo?.secId || null
+          const secaoNome = p.sectionName || resolvedSecInfo?.name || resolvedCatInfo?.secName || null
+          const departamentoId = deptId || resolvedSecInfo?.deptId || resolvedCatInfo?.deptId || null
+          const departamentoNome = resolvedSecInfo?.deptName || resolvedCatInfo?.deptName || departmentsMap.get(deptId) || null
+
+          return {
+            id: p.id,                                              // pcprodut.codprod
+            empresa_id: empresa.id,
+            nome: p.name,                                          // pcprodut.descricao
+            descricao: p.descriptionShort || p.description1,      // pcprodut.descricao1
+            categoria_id: String(catId || ''),                    // pcprodut.codcategoria
+            categoria_nome: categoriaNome,
+            secao_id: secaoId,
+            secao_nome: secaoNome,
+            secao: secaoNome, // compatibilidade
+            departamento_id: departamentoId,
+            departamento_nome: departamentoNome,
+            marca_id: brId || null,
+            marca_nome: resolvedBrandName,
+            fornecedor: resolvedBrandName,                        // compatibilidade
+            unidade: p.unity || 'UN',                             // pcprodut.unidade
+            ativo: p.isActive !== false && p.active !== false      // ambos os campos conforme doc
+          }
+        }).filter((p: any) => p.id)
 
         if (lote.length > 0) {
           promessas.push(

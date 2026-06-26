@@ -965,8 +965,8 @@ tr:hover td {
     <input type="text" id="prod-search" placeholder="Nome ou codigo...">
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-    <table><thead><tr><th>Cod.</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Seção</th><th>Marca</th><th>Status</th></tr></thead>
-    <tbody id="prod-tbody"><tr><td colspan="7"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <table><thead><tr><th>Cod.</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Seção</th><th>Departamento</th><th>Marca</th><th>Status</th></tr></thead>
+    <tbody id="prod-tbody"><tr><td colspan="8"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
   </div>
 </div>
 
@@ -1723,15 +1723,16 @@ function renderProdutos() {
   const search = document.getElementById('prod-search').value.toLowerCase()
   const list = S.produtos.filter(p => !search || (p.nome || '').toLowerCase().includes(search) || String(p.id).includes(search))
   const tb = document.getElementById('prod-tbody')
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Sem produtos</p></div></td></tr>'; return }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Sem produtos</p></div></td></tr>'; return }
   tb.innerHTML = list.slice(0, 100).map(p => 
     `<tr>
       <td style="font-size:12px">${p.id}</td>
       <td><div style="font-weight:500;font-size:13px">${p.nome || '-'}</div></td>
       <td style="font-size:12px">${fmtMoney(p.preco)}</td>
       <td style="font-size:12px">${p.categoria_nome || '-'}</td>
-      <td style="font-size:12px">${p.secao || '-'}</td>
-      <td style="font-size:12px">${p.fornecedor || '-'}</td>
+      <td style="font-size:12px">${p.secao_nome || p.secao || '-'}</td>
+      <td style="font-size:12px">${p.departamento_nome || '-'}</td>
+      <td style="font-size:12px">${p.marca_nome || p.fornecedor || '-'}</td>
       <td>${p.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
     </tr>`
   ).join('')
