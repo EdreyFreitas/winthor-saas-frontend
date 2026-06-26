@@ -1883,19 +1883,30 @@ function updateDashMetrics() {
 
 // Detail Modal Functions
 async function ensureProductsLoaded(productIds) {
-  const missingIds = productIds.filter(id => !S.produtos.some(x => String(x.id) === String(id)));
+  const cleanIds = productIds.map(id => Number(id)).filter(id => !isNaN(id));
+  const missingIds = cleanIds.filter(id => !S.produtos.some(x => Number(x.id) === id));
   if (missingIds.length > 0) {
     try {
+      console.log('ensureProductsLoaded: buscando IDs faltantes:', missingIds);
       const { data, error } = await supabase
         .from('produtos')
         .select('id, nome, categoria_nome, secao_nome, departamento_nome, marca_nome, fornecedor, ativo, preco')
         .in('id', missingIds);
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Erro Supabase ao buscar produtos:', error);
+        throw error;
+      }
+      
       if (data && data.length > 0) {
-        S.produtos.push(...data);
+        console.log('ensureProductsLoaded: recebidos:', data);
+        const sanitized = data.map(p => ({ ...p, id: Number(p.id) }));
+        S.produtos.push(...sanitized);
+      } else {
+        console.warn('ensureProductsLoaded: nenhum produto retornado do Supabase para os IDs:', missingIds);
       }
     } catch (e) {
-      console.warn('Erro ao carregar nomes de produtos dinamicamente:', e);
+      console.error('Erro ao carregar nomes de produtos dinamicamente:', e);
     }
   }
 }
@@ -2015,7 +2026,7 @@ async function openCustomerModal(customerId) {
       const ids = prodList.map(item => item.id).filter(Boolean);
       await ensureProductsLoaded(ids);
       prodTb.innerHTML = prodList.map(item => {
-        const p = S.produtos.find(x => String(x.id) === String(item.id));
+        const p = S.produtos.find(x => Number(x.id) === Number(item.id));
         return `<tr>
           <td>${item.id}</td>
           <td style="font-weight:500">${p ? p.nome : 'Produto ' + item.id}</td>
@@ -2069,7 +2080,7 @@ async function openOrderModal(orderId) {
     const ids = o.itens.map(it => it.productId).filter(Boolean);
     await ensureProductsLoaded(ids);
     itemsTb.innerHTML = o.itens.map(it => {
-      const p = S.produtos.find(x => String(x.id) === String(it.productId));
+      const p = S.produtos.find(x => Number(x.id) === Number(it.productId));
       const qty = parseFloat(it.quantity || 0);
       const price = parseFloat(it.sellPrice || 0);
       const total = qty * price;
