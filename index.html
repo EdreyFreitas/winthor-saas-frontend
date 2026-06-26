@@ -873,9 +873,17 @@ tr:hover td {
   margin-bottom: 4px;
   border-radius: 4px;
 }
+.multiselect-options {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
 .rca-option-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   padding: 6px 12px;
   font-size: 13px;
@@ -886,6 +894,7 @@ tr:hover td {
   text-overflow: ellipsis;
   width: 100%;
   box-sizing: border-box;
+  text-align: left;
 }
 .rca-option-item:hover {
   background: rgba(255, 255, 255, 0.05);
@@ -895,6 +904,7 @@ tr:hover td {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+  margin: 0;
 }
 
 /* Date range inputs style inside date group */
@@ -1083,6 +1093,25 @@ tr:hover td {
     </div>
     
     <!-- Filtro por Período de Datas -->
+    <!-- Filtro por Período de Datas Presets -->
+    <select id="ped-date-preset" style="width:160px; flex:none">
+      <option value="">Período: Todos</option>
+      <option value="hoje">Hoje</option>
+      <option value="ontem">Ontem</option>
+      <option value="semana_atual">Semana Atual</option>
+      <option value="semana_anterior">Semana Anterior</option>
+      <option value="ultimos_15_dias">Últimos 15 dias</option>
+      <option value="mes_atual">Mês Atual</option>
+      <option value="mes_anterior">Mês Anterior</option>
+      <option value="trimestre_atual">Trimestre Atual</option>
+      <option value="trimestre_anterior">Trimestre Anterior</option>
+      <option value="semestre_atual">Semestre Atual</option>
+      <option value="semestre_anterior">Semestre Anterior</option>
+      <option value="ano_atual">Ano Atual</option>
+      <option value="ano_anterior">Ano Anterior</option>
+      <option value="limpar">Limpar Datas</option>
+    </select>
+
     <div class="date-filter-group">
       <span style="font-size:12px; color:#a1a1aa">De:</span>
       <input type="date" id="ped-date-start">
@@ -2768,6 +2797,132 @@ function updateRcaBtnText() {
   }
 }
 
+function applyDatePreset(preset) {
+  const startInput = document.getElementById('ped-date-start');
+  const endInput = document.getElementById('ped-date-end');
+  if (!startInput || !endInput) return;
+  
+  const today = new Date();
+  const getFmtDate = (d) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  
+  let start = '';
+  let end = '';
+  
+  switch (preset) {
+    case 'hoje':
+      start = getFmtDate(today);
+      end = getFmtDate(today);
+      break;
+    case 'ontem':
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      start = getFmtDate(yesterday);
+      end = getFmtDate(yesterday);
+      break;
+    case 'semana_atual': {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(today);
+      monday.setDate(diff);
+      start = getFmtDate(monday);
+      end = getFmtDate(today);
+      break;
+    }
+    case 'semana_anterior': {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
+      const monday = new Date(today);
+      monday.setDate(diff);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      start = getFmtDate(monday);
+      end = getFmtDate(sunday);
+      break;
+    }
+    case 'ultimos_15_dias': {
+      const startD = new Date(today);
+      startD.setDate(today.getDate() - 15);
+      start = getFmtDate(startD);
+      end = getFmtDate(today);
+      break;
+    }
+    case 'mes_atual': {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+      const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'mes_anterior': {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const last = new Date(today.getFullYear(), today.getMonth(), 0);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'trimestre_atual': {
+      const q = Math.floor(today.getMonth() / 3);
+      const first = new Date(today.getFullYear(), q * 3, 1);
+      const last = new Date(today.getFullYear(), (q + 1) * 3, 0);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'trimestre_anterior': {
+      const q = Math.floor(today.getMonth() / 3) - 1;
+      const first = new Date(today.getFullYear(), q * 3, 1);
+      const last = new Date(today.getFullYear(), (q + 1) * 3, 0);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'semestre_atual': {
+      const sem = today.getMonth() < 6 ? 0 : 6;
+      const first = new Date(today.getFullYear(), sem, 1);
+      const last = new Date(today.getFullYear(), sem + 6, 0);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'semestre_anterior': {
+      const sem = today.getMonth() < 6 ? 0 : 6;
+      const first = new Date(today.getFullYear() - (sem === 0 ? 1 : 0), sem === 0 ? 6 : 0, 1);
+      const last = new Date(today.getFullYear() - (sem === 0 ? 1 : 0), sem === 0 ? 12 : 6, 0);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'ano_atual': {
+      const first = new Date(today.getFullYear(), 0, 1);
+      const last = new Date(today.getFullYear(), 11, 31);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'ano_anterior': {
+      const first = new Date(today.getFullYear() - 1, 0, 1);
+      const last = new Date(today.getFullYear() - 1, 11, 31);
+      start = getFmtDate(first);
+      end = getFmtDate(last);
+      break;
+    }
+    case 'limpar':
+    default:
+      start = '';
+      end = '';
+      break;
+  }
+  
+  startInput.value = start;
+  endInput.value = end;
+  renderPedidos();
+}
+
 function setupModalTabs() {
   const tabs = [
     { btn: 'tab-btn-cust-info', content: 'tab-cust-info' },
@@ -2922,6 +3077,7 @@ document.getElementById('ped-search').addEventListener('input', renderPedidos)
 document.getElementById('ped-status').addEventListener('change', renderPedidos)
 document.getElementById('ped-date-start').addEventListener('change', renderPedidos)
 document.getElementById('ped-date-end').addEventListener('change', renderPedidos)
+document.getElementById('ped-date-preset').addEventListener('change', function() { applyDatePreset(this.value); })
 document.getElementById('prod-search').addEventListener('input', renderProdutos)
 document.getElementById('btn-filter-dash').addEventListener('click', loadDashboard)
 document.getElementById('btn-close-cust-modal').addEventListener('click', () => { document.getElementById('customer-modal').style.display = 'none'; })
