@@ -923,6 +923,25 @@ tr:hover td {
   flex: 1;
   min-width: 100px;
 }
+/* Pagination buttons */
+.btn-pagi {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: #fff;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+.btn-pagi:hover:not(:disabled) {
+  background: var(--bg-card-hover) !important;
+  border-color: var(--border-focus) !important;
+}
+.btn-pagi:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>
 </head>
 <body>
@@ -1147,6 +1166,23 @@ tr:hover td {
   <div class="card" style="padding:0;overflow:hidden">
     <table><thead><tr><th>Pedido</th><th>Cliente</th><th>RCA</th><th>Supervisor</th><th>Data</th><th>Total</th><th>Status</th></tr></thead>
     <tbody id="ped-tbody"><tr><td colspan="7"><div class="empty-state"><i class="ti ti-file-invoice"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <!-- Controle de Paginação -->
+    <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid var(--border-color); background:var(--bg-secondary); flex-wrap:wrap; gap:12px">
+      <div style="display:flex; align-items:center; gap:8px">
+        <span style="font-size:13px; color:var(--text-secondary)">Itens por página:</span>
+        <select id="ped-page-size" style="width:80px; padding:6px 12px; font-size:13px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-primary); color:#fff">
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span style="font-size:13px; color:var(--text-secondary); margin-left:12px" id="ped-pagination-info">Mostrando 0-0 de 0</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px">
+        <button id="ped-page-prev" class="btn-pagi" disabled><i class="ti ti-chevron-left" style="vertical-align:middle"></i> Anterior</button>
+        <span style="font-size:13px; color:#fff; font-weight:600; padding: 0 4px" id="ped-page-current">Página 1</span>
+        <button id="ped-page-next" class="btn-pagi" disabled>Próximo <i class="ti ti-chevron-right" style="vertical-align:middle"></i></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1597,7 +1633,11 @@ const S = {
   pedidos: [],
   produtos: [],
   atendimentos: [],
-  subscriptions: []
+  subscriptions: [],
+  pedidosPage: [],
+  pedidosTotalCount: 0,
+  pedidosCurrentPage: 1,
+  pedidosPageSize: 25
 }
 
 // ============================================================
@@ -1697,9 +1737,9 @@ function showPage(id) {
   const nav = document.querySelector('[data-page="' + id + '"]'); if (nav) nav.classList.add('active')
   const titles = { dashboard: 'Dashboard', clientes: 'Clientes', pedidos: 'Pedidos', produtos: 'Produtos', predicoes: 'Predicoes', funil: 'Funil', atendimento: 'Atendimento', exportar: 'Exportar', config: 'Configuracoes' }
   document.getElementById('page-title').textContent = titles[id] || id
-  // Carrega dados contextuais ao mudar de aba
   if (id === 'config') { loadLogSync(); loadWinthorConfig(); }
   if (id === 'dashboard') loadDashboard()
+  if (id === 'pedidos') loadPedidosPage()
   if (id === 'predicoes') { loadPredictionsTab(); renderTopSellingProducts(); }
 }
 
@@ -1714,6 +1754,7 @@ async function loadAllData() {
   await Promise.all([
     loadClientes(),
     loadPedidos(),
+    loadPedidosPage(),
     loadProdutos(),
     loadAtendimentos(),
     loadSyncStatus(),
@@ -1752,8 +1793,89 @@ async function loadPedidos() {
     }
   }
   
-  renderPedidos()
   updateDashMetrics()
+}
+
+async function loadPedidosPage() {
+  if (!S.empresa) return;
+
+  const search = document.getElementById('ped-search').value.trim().toLowerCase();
+  const status = document.getElementById('ped-status').value;
+  const filial = document.getElementById('ped-filial').value;
+  const dateStart = document.getElementById('ped-date-start').value;
+  const dateEnd = document.getElementById('ped-date-end').value;
+
+  // RCA Filtering Check
+  const rcaCheckboxes = document.querySelectorAll('.rca-checkbox');
+  const selectedRcas = Array.from(rcaCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+  // If RCA filter is active, but NO RCAs are selected, return 0 items immediately
+  if (rcaCheckboxes.length > 0 && selectedRcas.length === 0) {
+    S.pedidosPage = [];
+    S.pedidosTotalCount = 0;
+    renderPedidosPage();
+    return;
+  }
+
+  // Construct query
+  const needRcaFilter = rcaCheckboxes.length > 0 && selectedRcas.length < rcaCheckboxes.length;
+  
+  let query;
+  if (needRcaFilter) {
+    query = supabase.from('pedidos')
+      .select('*, clientes!inner(vendedor_id)', { count: 'exact' })
+      .in('clientes.vendedor_id', selectedRcas);
+  } else {
+    query = supabase.from('pedidos')
+      .select('*, clientes(vendedor_id)', { count: 'exact' });
+  }
+
+  // Apply other filters
+  query = query.eq('empresa_id', S.empresa.id);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  if (filial) {
+    query = query.eq('filial', filial);
+  }
+
+  if (dateStart) {
+    query = query.gte('data', dateStart);
+  }
+
+  if (dateEnd) {
+    query = query.lte('data', dateEnd);
+  }
+
+  if (search) {
+    if (/^\d+$/.test(search)) {
+      query = query.or(`id.eq.${search},cliente_nome.ilike.%${search}%`);
+    } else {
+      query = query.ilike('cliente_nome', `%${search}%`);
+    }
+  }
+
+  // Add ordering
+  query = query.order('data', { ascending: false }).order('id', { ascending: false });
+
+  // Add pagination range
+  const from = (S.pedidosCurrentPage - 1) * S.pedidosPageSize;
+  const to = from + S.pedidosPageSize - 1;
+  query = query.range(from, to);
+
+  // Fetch
+  const { data, count, error } = await query;
+  if (error) {
+    console.error('Erro ao buscar pedidos paginados:', error);
+    return;
+  }
+
+  S.pedidosPage = data || [];
+  S.pedidosTotalCount = count || 0;
+
+  renderPedidosPage();
 }
 
 async function loadProdutos() {
@@ -2052,47 +2174,22 @@ function renderClientes() {
   }).join('')
 }
 
-function renderPedidos() {
-  const search = document.getElementById('ped-search').value.toLowerCase();
-  const status = document.getElementById('ped-status').value;
-  const filial = document.getElementById('ped-filial').value;
-  const dateStart = document.getElementById('ped-date-start').value;
-  const dateEnd = document.getElementById('ped-date-end').value;
-  
-  const rcaCheckboxes = document.querySelectorAll('.rca-checkbox');
-  const hasRcaFilter = rcaCheckboxes.length > 0;
-  const selectedRcas = Array.from(rcaCheckboxes).filter(cb => cb.checked).map(cb => String(cb.value));
-
-  const list = S.pedidos.filter(p => {
-    // 1. Search filter
-    if (search && !String(p.id).includes(search) && !(p.cliente_nome || '').toLowerCase().includes(search)) return false;
-    
-    // 2. Status filter
-    if (status && p.status !== status) return false;
-    
-    // 3. Date range filter
-    if (dateStart && p.data < dateStart) return false;
-    if (dateEnd && p.data > dateEnd) return false;
-    
-    // 4. RCA filter
-    if (hasRcaFilter) {
-      const cliente = S.clientes.find(c => String(c.id) === String(p.cliente_id));
-      const vendedorId = cliente ? String(cliente.vendedor_id || '') : '';
-      if (!selectedRcas.includes(vendedorId)) return false;
-    }
-
-    // 5. Filial filter
-    if (filial && String(p.filial || '') !== filial) return false;
-    
-    return true;
-  });
-
+function renderPedidosPage() {
   const tb = document.getElementById('ped-tbody');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido</p></div></td></tr>'; return; }
+  if (!tb) return;
 
-  tb.innerHTML = list.slice(0, 100).map(p => {
-    const cliente = S.clientes.find(c => String(c.id) === String(p.cliente_id));
-    const rcaId = cliente ? String(cliente.vendedor_id || '') : '';
+  if (!S.pedidosPage.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Nenhum pedido</p></div></td></tr>';
+    document.getElementById('ped-pagination-info').textContent = 'Mostrando 0-0 de 0';
+    document.getElementById('ped-page-prev').disabled = true;
+    document.getElementById('ped-page-next').disabled = true;
+    document.getElementById('ped-page-current').textContent = 'Página 1';
+    return;
+  }
+
+  tb.innerHTML = S.pedidosPage.map(p => {
+    // Resolve vendor / RCA using joined clientes relation if available, otherwise check S.clientes
+    const rcaId = p.clientes ? String(p.clientes.vendedor_id || '') : '';
     const rca = RCAS[rcaId];
     const rcaDesc = rca ? `[${rcaId}] ${rca.nome}` : (rcaId ? `RCA ${rcaId}` : '-');
     const supervisorDesc = rca ? (SUPERVISORES[rca.supervisorId] || '-') : '-';
@@ -2108,6 +2205,18 @@ function renderPedidos() {
       <td><span class="badge ${statusData.class}">${statusData.label}</span></td>
     </tr>`;
   }).join('');
+
+  // Update pagination controls
+  const totalCount = S.pedidosTotalCount;
+  const startIdx = (S.pedidosCurrentPage - 1) * S.pedidosPageSize + 1;
+  const endIdx = Math.min(startIdx + S.pedidosPage.length - 1, totalCount);
+
+  document.getElementById('ped-pagination-info').textContent = `Mostrando ${startIdx}-${endIdx} de ${totalCount}`;
+  document.getElementById('ped-page-current').textContent = `Página ${S.pedidosCurrentPage}`;
+
+  // Enable/disable buttons
+  document.getElementById('ped-page-prev').disabled = S.pedidosCurrentPage <= 1;
+  document.getElementById('ped-page-next').disabled = endIdx >= totalCount;
 }
 
 function renderProdutos() {
@@ -2448,7 +2557,7 @@ async function openOrderModal(orderId) {
   modal.style.display = 'flex';
   
   // Find order
-  let o = S.pedidos.find(x => String(x.id) === String(orderId));
+  let o = S.pedidos.find(x => String(x.id) === String(orderId)) || S.pedidosPage.find(x => String(x.id) === String(orderId));
   if (!o) {
     const { data, error } = await supabase
       .from('pedidos')
@@ -2531,10 +2640,15 @@ async function openOrderModal(orderId) {
         local.codigo_rastreio = tracking;
         local.observacoes = notes;
       }
+      const localPage = S.pedidosPage.find(x => String(x.id) === String(orderId));
+      if (localPage) {
+        localPage.codigo_rastreio = tracking;
+        localPage.observacoes = notes;
+      }
       
       alert('Pedido atualizado com sucesso!');
       modal.style.display = 'none';
-      renderPedidos();
+      renderPedidosPage();
       renderRecentActivities();
     } catch(err) {
       alert('Erro ao salvar: ' + err.message);
@@ -2720,7 +2834,8 @@ function initRcaFilter() {
       
       updateRcaBtnText();
       updateSupervisorBtnText();
-      renderPedidos();
+      S.pedidosCurrentPage = 1;
+      loadPedidosPage();
     }
   };
   
@@ -2750,7 +2865,8 @@ function initRcaFilter() {
       
       updateRcaBtnText();
       updateSupervisorBtnText();
-      renderPedidos();
+      S.pedidosCurrentPage = 1;
+      loadPedidosPage();
     }
   };
   
@@ -2765,7 +2881,8 @@ function initRcaFilter() {
       rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = true);
       updateRcaBtnText();
       updateSupervisorBtnText();
-      renderPedidos();
+      S.pedidosCurrentPage = 1;
+      loadPedidosPage();
     };
   }
   
@@ -2779,7 +2896,8 @@ function initRcaFilter() {
       rcaContainer.querySelectorAll('.rca-checkbox').forEach(cb => cb.checked = false);
       updateRcaBtnText();
       updateSupervisorBtnText();
-      renderPedidos();
+      S.pedidosCurrentPage = 1;
+      loadPedidosPage();
     };
   }
   
@@ -2794,7 +2912,8 @@ function initRcaFilter() {
       });
       updateRcaBtnText();
       updateSupervisorBtnText();
-      renderPedidos();
+      S.pedidosCurrentPage = 1;
+      loadPedidosPage();
     };
   }
   
@@ -2808,7 +2927,8 @@ function initRcaFilter() {
       });
       updateRcaBtnText();
       updateSupervisorBtnText();
-      renderPedidos();
+      S.pedidosCurrentPage = 1;
+      loadPedidosPage();
     };
   }
   
@@ -2974,7 +3094,8 @@ function applyDatePreset(preset) {
   
   startInput.value = start;
   endInput.value = end;
-  renderPedidos();
+  S.pedidosCurrentPage = 1;
+  loadPedidosPage();
 }
 
 function setupModalTabs() {
@@ -3127,12 +3248,43 @@ document.getElementById('link-register').addEventListener('click', (e) => { e.pr
 document.getElementById('link-login').addEventListener('click', (e) => { e.preventDefault(); showLogin() })
 document.getElementById('cli-search').addEventListener('input', renderClientes)
 document.getElementById('cli-filter').addEventListener('change', renderClientes)
-document.getElementById('ped-search').addEventListener('input', renderPedidos)
-document.getElementById('ped-status').addEventListener('change', renderPedidos)
-document.getElementById('ped-filial').addEventListener('change', renderPedidos)
-document.getElementById('ped-date-start').addEventListener('change', renderPedidos)
-document.getElementById('ped-date-end').addEventListener('change', renderPedidos)
-document.getElementById('ped-date-preset').addEventListener('change', function() { applyDatePreset(this.value); })
+const reloadPedidos = () => {
+  S.pedidosCurrentPage = 1;
+  loadPedidosPage();
+};
+
+let pedSearchTimeout;
+document.getElementById('ped-search').addEventListener('input', () => {
+  clearTimeout(pedSearchTimeout);
+  pedSearchTimeout = setTimeout(reloadPedidos, 300);
+});
+
+document.getElementById('ped-status').addEventListener('change', reloadPedidos);
+document.getElementById('ped-filial').addEventListener('change', reloadPedidos);
+document.getElementById('ped-date-start').addEventListener('change', reloadPedidos);
+document.getElementById('ped-date-end').addEventListener('change', reloadPedidos);
+document.getElementById('ped-date-preset').addEventListener('change', function() { applyDatePreset(this.value); });
+
+document.getElementById('ped-page-size').addEventListener('change', function() {
+  S.pedidosPageSize = parseInt(this.value, 10) || 25;
+  reloadPedidos();
+});
+
+document.getElementById('ped-page-prev').addEventListener('click', () => {
+  if (S.pedidosCurrentPage > 1) {
+    S.pedidosCurrentPage--;
+    loadPedidosPage();
+  }
+});
+
+document.getElementById('ped-page-next').addEventListener('click', () => {
+  const startIdx = (S.pedidosCurrentPage - 1) * S.pedidosPageSize + 1;
+  const endIdx = startIdx + S.pedidosPage.length - 1;
+  if (endIdx < S.pedidosTotalCount) {
+    S.pedidosCurrentPage++;
+    loadPedidosPage();
+  }
+});
 document.getElementById('prod-search').addEventListener('input', renderProdutos)
 document.getElementById('btn-filter-dash').addEventListener('click', loadDashboard)
 document.getElementById('btn-close-cust-modal').addEventListener('click', () => { document.getElementById('customer-modal').style.display = 'none'; })
