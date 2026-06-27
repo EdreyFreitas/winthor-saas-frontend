@@ -1101,84 +1101,93 @@ tr:hover td {
 
 <!-- PEDIDOS -->
 <div class="page" id="page-pedidos">
-  <div class="search-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
-    <input type="text" id="ped-search" placeholder="Numero do pedido ou cliente..." style="flex:1; min-width:200px">
-    
-    <!-- Filtro por Supervisor (Multiselect) -->
-    <div class="multiselect-container" id="supervisor-multiselect">
-      <button type="button" class="multiselect-btn" id="supervisor-select-btn">Supervisor: Todos</button>
-      <div class="multiselect-dropdown" id="supervisor-dropdown">
-        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center">
-          <button type="button" id="supervisor-select-all" style="font-size:11px; background:none; border:none; color:#24b47e; cursor:pointer; font-weight:600">Marcar Todos</button>
-          <button type="button" id="supervisor-clear-all" style="font-size:11px; background:none; border:none; color:#ef4444; cursor:pointer; font-weight:600">Desmarcar Todos</button>
-        </div>
-        <div class="multiselect-options" id="supervisor-options-container" style="max-height: 250px; overflow-y: auto; padding: 4px;">
-          <!-- JS populado -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Filtro por RCA (Multiselect) -->
-    <div class="multiselect-container" id="rca-multiselect">
-      <button type="button" class="multiselect-btn" id="rca-select-btn">RCA: Todos</button>
-      <div class="multiselect-dropdown" id="rca-dropdown">
-        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center">
-          <button type="button" id="rca-select-all" style="font-size:11px; background:none; border:none; color:#24b47e; cursor:pointer; font-weight:600">Marcar Todos</button>
-          <button type="button" id="rca-clear-all" style="font-size:11px; background:none; border:none; color:#ef4444; cursor:pointer; font-weight:600">Desmarcar Todos</button>
-        </div>
-        <div class="multiselect-options" id="rca-options-container" style="max-height: 250px; overflow-y: auto; padding: 4px;">
-          <!-- JS populado -->
+  <div class="search-bar" style="display:flex; flex-direction:column; gap:16px; background:#18181b; padding:16px; border-radius:12px; border:1px solid #27272a; margin-bottom:20px">
+    <!-- Linha 1: Filtros Principais -->
+    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; width:100%">
+      <input type="text" id="ped-search" placeholder="Número do pedido ou cliente..." style="flex:1; min-width:240px">
+      
+      <!-- Filtro por Supervisor (Multiselect) -->
+      <div class="multiselect-container" id="supervisor-multiselect" style="min-width:180px">
+        <button type="button" class="multiselect-btn" id="supervisor-select-btn" style="width:100%">Supervisor: Todos</button>
+        <div class="multiselect-dropdown" id="supervisor-dropdown">
+          <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center">
+            <button type="button" id="supervisor-select-all" style="font-size:11px; background:none; border:none; color:#24b47e; cursor:pointer; font-weight:600">Marcar Todos</button>
+            <button type="button" id="supervisor-clear-all" style="font-size:11px; background:none; border:none; color:#ef4444; cursor:pointer; font-weight:600">Desmarcar Todos</button>
+          </div>
+          <div class="multiselect-options" id="supervisor-options-container" style="max-height: 250px; overflow-y: auto; padding: 4px;">
+            <!-- JS populado -->
+          </div>
         </div>
       </div>
+
+      <!-- Filtro por RCA (Multiselect) -->
+      <div class="multiselect-container" id="rca-multiselect" style="min-width:180px">
+        <button type="button" class="multiselect-btn" id="rca-select-btn" style="width:100%">RCA: Todos</button>
+        <div class="multiselect-dropdown" id="rca-dropdown">
+          <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center">
+            <button type="button" id="rca-select-all" style="font-size:11px; background:none; border:none; color:#24b47e; cursor:pointer; font-weight:600">Marcar Todos</button>
+            <button type="button" id="rca-clear-all" style="font-size:11px; background:none; border:none; color:#ef4444; cursor:pointer; font-weight:600">Desmarcar Todos</button>
+          </div>
+          <div class="multiselect-options" id="rca-options-container" style="max-height: 250px; overflow-y: auto; padding: 4px;">
+            <!-- JS populado -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Filtro por Filial -->
+      <select id="ped-filial" style="width:140px; flex:none; margin:0">
+        <option value="">Filial: Todas</option>
+        <option value="1">Filial 1</option>
+        <option value="2">Filial 2</option>
+        <option value="3">Filial 3</option>
+        <option value="4">Filial 4</option>
+        <option value="5">Filial 5</option>
+        <option value="6">Filial 6</option>
+      </select>
+
+      <select id="ped-status" style="width:150px; flex:none; margin:0">
+        <option value="">Status: Todos</option>
+        <option value="P">Pendente</option>
+        <option value="M">Montado</option>
+        <option value="B">Bloqueado</option>
+        <option value="C">Cancelado</option>
+        <option value="F">Faturado</option>
+        <option value="L">Liberado</option>
+      </select>
     </div>
-    
-    <!-- Filtro por Período de Datas -->
-    <!-- Filtro por Período de Datas Presets -->
-    <select id="ped-date-preset" style="width:160px; flex:none">
-      <option value="">Período: Todos</option>
-      <option value="hoje">Hoje</option>
-      <option value="ontem">Ontem</option>
-      <option value="semana_atual">Semana Atual</option>
-      <option value="semana_anterior">Semana Anterior</option>
-      <option value="ultimos_15_dias">Últimos 15 dias</option>
-      <option value="mes_atual">Mês Atual</option>
-      <option value="mes_anterior">Mês Anterior</option>
-      <option value="trimestre_atual">Trimestre Atual</option>
-      <option value="trimestre_anterior">Trimestre Anterior</option>
-      <option value="semestre_atual">Semestre Atual</option>
-      <option value="semestre_anterior">Semestre Anterior</option>
-      <option value="ano_atual">Ano Atual</option>
-      <option value="ano_anterior">Ano Anterior</option>
-      <option value="limpar">Limpar Datas</option>
-    </select>
 
-    <div class="date-filter-group">
-      <span style="font-size:12px; color:#a1a1aa">De:</span>
-      <input type="date" id="ped-date-start">
-      <span style="font-size:12px; color:#a1a1aa">Até:</span>
-      <input type="date" id="ped-date-end">
+    <!-- Linha 2: Filtros de Data Sincronizados -->
+    <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; width:100%; border-top:1px solid #27272a; padding-top:12px">
+      <div style="display:flex; align-items:center; gap:8px">
+        <span style="font-size:13px; color:#a1a1aa; font-weight:500"><i class="ti ti-calendar" style="vertical-align:middle; margin-right:4px"></i> Filtrar por Data:</span>
+      </div>
+      
+      <!-- Filtro por Período de Datas Presets -->
+      <select id="ped-date-preset" style="width:180px; flex:none; margin:0">
+        <option value="">Período: Todos</option>
+        <option value="hoje">Hoje</option>
+        <option value="ontem">Ontem</option>
+        <option value="semana_atual">Semana Atual</option>
+        <option value="semana_anterior">Semana Anterior</option>
+        <option value="ultimos_15_dias">Últimos 15 dias</option>
+        <option value="mes_atual">Mês Atual</option>
+        <option value="mes_anterior">Mês Anterior</option>
+        <option value="trimestre_atual">Trimestre Atual</option>
+        <option value="trimestre_anterior">Trimestre Anterior</option>
+        <option value="semestre_atual">Semestre Atual</option>
+        <option value="semestre_anterior">Semestre Anterior</option>
+        <option value="ano_atual">Ano Atual</option>
+        <option value="ano_anterior">Ano Anterior</option>
+        <option value="limpar">Limpar Datas</option>
+      </select>
+
+      <div class="date-filter-group" style="flex:none; min-width:auto">
+        <span style="font-size:12px; color:#a1a1aa">De:</span>
+        <input type="date" id="ped-date-start" style="width:145px; flex:none">
+        <span style="font-size:12px; color:#a1a1aa">Até:</span>
+        <input type="date" id="ped-date-end" style="width:145px; flex:none">
+      </div>
     </div>
-
-    <!-- Filtro por Filial -->
-    <select id="ped-filial" style="width:130px; flex:none">
-      <option value="">Filial: Todas</option>
-      <option value="1">Filial 1</option>
-      <option value="2">Filial 2</option>
-      <option value="3">Filial 3</option>
-      <option value="4">Filial 4</option>
-      <option value="5">Filial 5</option>
-      <option value="6">Filial 6</option>
-    </select>
-
-    <select id="ped-status" style="width:140px; flex:none">
-      <option value="">Status: Todos</option>
-      <option value="P">Pendente</option>
-      <option value="M">Montado</option>
-      <option value="B">Bloqueado</option>
-      <option value="C">Cancelado</option>
-      <option value="F">Faturado</option>
-      <option value="L">Liberado</option>
-    </select>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
     <table><thead><tr><th>Pedido</th><th>Cliente</th><th>RCA</th><th>Supervisor</th><th>Data</th><th>Total</th><th>Status</th></tr></thead>
@@ -3231,6 +3240,93 @@ function updateRcaBtnText() {
   }
 }
 
+function synchronizePresetFromDates() {
+  const startInput = document.getElementById('ped-date-start');
+  const endInput = document.getElementById('ped-date-end');
+  const presetSelect = document.getElementById('ped-date-preset');
+  if (!startInput || !endInput || !presetSelect) return;
+
+  const startVal = startInput.value;
+  const endVal = endInput.value;
+
+  if (!startVal && !endVal) {
+    presetSelect.value = '';
+    return;
+  }
+
+  const today = new Date();
+  const getFmtDate = d => d.toLocaleDateString('sv');
+
+  const presets = {};
+  presets['hoje'] = { start: getFmtDate(today), end: getFmtDate(today) };
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  presets['ontem'] = { start: getFmtDate(yesterday), end: getFmtDate(yesterday) };
+
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(today);
+  monday.setDate(diff);
+  presets['semana_atual'] = { start: getFmtDate(monday), end: getFmtDate(today) };
+
+  const diffPrev = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
+  const mondayPrev = new Date(today);
+  mondayPrev.setDate(diffPrev);
+  const sundayPrev = new Date(mondayPrev);
+  sundayPrev.setDate(mondayPrev.getDate() + 6);
+  presets['semana_anterior'] = { start: getFmtDate(mondayPrev), end: getFmtDate(sundayPrev) };
+
+  const startD = new Date(today);
+  startD.setDate(today.getDate() - 15);
+  presets['ultimos_15_dias'] = { start: getFmtDate(startD), end: getFmtDate(today) };
+
+  const firstM = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastM = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  presets['mes_atual'] = { start: getFmtDate(firstM), end: getFmtDate(lastM) };
+
+  const firstMPrev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMPrev = new Date(today.getFullYear(), today.getMonth(), 0);
+  presets['mes_anterior'] = { start: getFmtDate(firstMPrev), end: getFmtDate(lastMPrev) };
+
+  const q = Math.floor(today.getMonth() / 3);
+  const firstQ = new Date(today.getFullYear(), q * 3, 1);
+  const lastQ = new Date(today.getFullYear(), (q + 1) * 3, 0);
+  presets['trimestre_atual'] = { start: getFmtDate(firstQ), end: getFmtDate(lastQ) };
+
+  const qPrev = Math.floor(today.getMonth() / 3) - 1;
+  const firstQPrev = new Date(today.getFullYear(), qPrev * 3, 1);
+  const lastQPrev = new Date(today.getFullYear(), (qPrev + 1) * 3, 0);
+  presets['trimestre_anterior'] = { start: getFmtDate(firstQPrev), end: getFmtDate(lastQPrev) };
+
+  const sem = today.getMonth() < 6 ? 0 : 6;
+  const firstS = new Date(today.getFullYear(), sem, 1);
+  const lastS = new Date(today.getFullYear(), sem + 6, 0);
+  presets['semestre_atual'] = { start: getFmtDate(firstS), end: getFmtDate(lastS) };
+
+  const firstSPrev = new Date(today.getFullYear() - (sem === 0 ? 1 : 0), sem === 0 ? 6 : 0, 1);
+  const lastSPrev = new Date(today.getFullYear() - (sem === 0 ? 1 : 0), sem === 0 ? 12 : 6, 0);
+  presets['semestre_anterior'] = { start: getFmtDate(firstSPrev), end: getFmtDate(lastSPrev) };
+
+  const firstY = new Date(today.getFullYear(), 0, 1);
+  const lastY = new Date(today.getFullYear(), 11, 31);
+  presets['ano_atual'] = { start: getFmtDate(firstY), end: getFmtDate(lastY) };
+
+  const firstYPrev = new Date(today.getFullYear() - 1, 0, 1);
+  const lastYPrev = new Date(today.getFullYear() - 1, 11, 31);
+  presets['ano_anterior'] = { start: getFmtDate(firstYPrev), end: getFmtDate(lastYPrev) };
+
+  let matchedPreset = '';
+  for (const [key, val] of Object.entries(presets)) {
+    if (val.start === startVal && val.end === endVal) {
+      matchedPreset = key;
+      break;
+    }
+  }
+
+  presetSelect.value = matchedPreset;
+}
+
 function applyDatePreset(preset) {
   const startInput = document.getElementById('ped-date-start');
   const endInput = document.getElementById('ped-date-end');
@@ -3349,6 +3445,7 @@ function applyDatePreset(preset) {
   
   startInput.value = start;
   endInput.value = end;
+  synchronizePresetFromDates();
   S.pedidosCurrentPage = 1;
   loadPedidosPage();
 }
@@ -3550,8 +3647,8 @@ document.getElementById('ped-search').addEventListener('input', () => {
 
 document.getElementById('ped-status').addEventListener('change', reloadPedidos);
 document.getElementById('ped-filial').addEventListener('change', reloadPedidos);
-document.getElementById('ped-date-start').addEventListener('change', reloadPedidos);
-document.getElementById('ped-date-end').addEventListener('change', reloadPedidos);
+document.getElementById('ped-date-start').addEventListener('change', () => { synchronizePresetFromDates(); reloadPedidos(); });
+document.getElementById('ped-date-end').addEventListener('change', () => { synchronizePresetFromDates(); reloadPedidos(); });
 document.getElementById('ped-date-preset').addEventListener('change', function() { applyDatePreset(this.value); });
 
 document.getElementById('ped-page-size').addEventListener('change', function() {
