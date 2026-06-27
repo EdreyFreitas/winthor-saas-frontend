@@ -1079,6 +1079,23 @@ tr:hover td {
   <div class="card" style="padding:0;overflow:hidden">
     <table><thead><tr><th>Cliente</th><th>CNPJ</th><th>Cidade</th><th>Score</th><th>Segmento</th><th>Ultima compra</th></tr></thead>
     <tbody id="cli-tbody"><tr><td colspan="6"><div class="empty-state"><i class="ti ti-users"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <!-- Controle de Paginação de Clientes -->
+    <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid var(--border-color); background:var(--bg-secondary); flex-wrap:wrap; gap:12px">
+      <div style="display:flex; align-items:center; gap:8px">
+        <span style="font-size:13px; color:var(--text-secondary)">Itens por página:</span>
+        <select id="cli-page-size" style="width:80px; padding:6px 12px; font-size:13px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-primary); color:#fff">
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span style="font-size:13px; color:var(--text-secondary); margin-left:12px" id="cli-pagination-info">Mostrando 0-0 de 0</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px">
+        <button id="cli-page-prev" class="btn-pagi" disabled><i class="ti ti-chevron-left" style="vertical-align:middle"></i> Anterior</button>
+        <span style="font-size:13px; color:#fff; font-weight:600; padding: 0 4px" id="cli-page-current">Página 1</span>
+        <button id="cli-page-next" class="btn-pagi" disabled>Próximo <i class="ti ti-chevron-right" style="vertical-align:middle"></i></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1194,6 +1211,23 @@ tr:hover td {
   <div class="card" style="padding:0;overflow:hidden">
     <table><thead><tr><th>Cod.</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Seção</th><th>Departamento</th><th>Marca</th><th>Status</th></tr></thead>
     <tbody id="prod-tbody"><tr><td colspan="8"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <!-- Controle de Paginação de Produtos -->
+    <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid var(--border-color); background:var(--bg-secondary); flex-wrap:wrap; gap:12px">
+      <div style="display:flex; align-items:center; gap:8px">
+        <span style="font-size:13px; color:var(--text-secondary)">Itens por página:</span>
+        <select id="prod-page-size" style="width:80px; padding:6px 12px; font-size:13px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-primary); color:#fff">
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span style="font-size:13px; color:var(--text-secondary); margin-left:12px" id="prod-pagination-info">Mostrando 0-0 de 0</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px">
+        <button id="prod-page-prev" class="btn-pagi" disabled><i class="ti ti-chevron-left" style="vertical-align:middle"></i> Anterior</button>
+        <span style="font-size:13px; color:#fff; font-weight:600; padding: 0 4px" id="prod-page-current">Página 1</span>
+        <button id="prod-page-next" class="btn-pagi" disabled>Próximo <i class="ti ti-chevron-right" style="vertical-align:middle"></i></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1637,7 +1671,15 @@ const S = {
   pedidosPage: [],
   pedidosTotalCount: 0,
   pedidosCurrentPage: 1,
-  pedidosPageSize: 25
+  pedidosPageSize: 25,
+  clientesPage: [],
+  clientesTotalCount: 0,
+  clientesCurrentPage: 1,
+  clientesPageSize: 25,
+  produtosPage: [],
+  produtosTotalCount: 0,
+  produtosCurrentPage: 1,
+  produtosPageSize: 25
 }
 
 // ============================================================
@@ -1739,7 +1781,9 @@ function showPage(id) {
   document.getElementById('page-title').textContent = titles[id] || id
   if (id === 'config') { loadLogSync(); loadWinthorConfig(); }
   if (id === 'dashboard') loadDashboard()
+  if (id === 'clientes') loadClientesPage()
   if (id === 'pedidos') loadPedidosPage()
+  if (id === 'produtos') loadProdutosPage()
   if (id === 'predicoes') { loadPredictionsTab(); renderTopSellingProducts(); }
 }
 
@@ -1753,9 +1797,11 @@ async function loadAllData() {
   // Carrega em paralelo para ser mais rapido
   await Promise.all([
     loadClientes(),
+    loadClientesPage(),
     loadPedidos(),
     loadPedidosPage(),
     loadProdutos(),
+    loadProdutosPage(),
     loadAtendimentos(),
     loadSyncStatus(),
     loadDashboard()
@@ -1763,11 +1809,64 @@ async function loadAllData() {
 }
 
 async function loadClientes() {
-  const { data, error } = await supabase.from('clientes').select('*').eq('empresa_id', S.empresa.id).order('score', { ascending: false })
+  const { data, error } = await supabase.from('clientes').select('*').eq('empresa_id', S.empresa.id).order('score', { ascending: false }).limit(1000)
   if (error) { console.error(error); return }
   S.clientes = data || []
-  renderClientes()
+  
+  const inat = S.clientes.filter(c => c.dias_sem_compra > 15).length
+  const badge = document.getElementById('badge-inat')
+  if (badge) {
+    badge.style.display = inat > 0 ? '' : 'none'
+    badge.textContent = inat
+  }
+  
   updateDashMetrics()
+}
+
+async function loadClientesPage() {
+  if (!S.empresa) return;
+
+  const search = document.getElementById('cli-search').value.trim().toLowerCase();
+  const filter = document.getElementById('cli-filter').value;
+
+  let query = supabase.from('clientes').select('*', { count: 'exact' });
+
+  // Apply filters
+  query = query.eq('empresa_id', S.empresa.id);
+
+  if (filter === 'inactive') {
+    query = query.gt('dias_sem_compra', 15);
+  } else if (filter === 'hot') {
+    query = query.eq('segmento', 'hot');
+  } else if (filter === 'warm') {
+    query = query.eq('segmento', 'warm');
+  } else if (filter === 'cold') {
+    query = query.eq('segmento', 'cold');
+  }
+
+  if (search) {
+    query = query.or(`nome.ilike.%${search}%,cnpj.ilike.%${search}%,cidade.ilike.%${search}%`);
+  }
+
+  // Add ordering
+  query = query.order('score', { ascending: false }).order('nome', { ascending: true });
+
+  // Add pagination range
+  const from = (S.clientesCurrentPage - 1) * S.clientesPageSize;
+  const to = from + S.clientesPageSize - 1;
+  query = query.range(from, to);
+
+  // Fetch
+  const { data, count, error } = await query;
+  if (error) {
+    console.error('Erro ao buscar clientes paginados:', error);
+    return;
+  }
+
+  S.clientesPage = data || [];
+  S.clientesTotalCount = count || 0;
+
+  renderClientesPage();
 }
 
 async function loadPedidos() {
@@ -1879,10 +1978,48 @@ async function loadPedidosPage() {
 }
 
 async function loadProdutos() {
-  const { data, error } = await supabase.from('produtos').select('*').eq('empresa_id', S.empresa.id).order('quantidade_vendida', { ascending: false })
+  const { data, error } = await supabase.from('produtos').select('*').eq('empresa_id', S.empresa.id).order('quantidade_vendida', { ascending: false }).limit(1000)
   if (error) { console.error(error); return }
   S.produtos = data || []
-  renderProdutos()
+}
+
+async function loadProdutosPage() {
+  if (!S.empresa) return;
+
+  const search = document.getElementById('prod-search').value.trim().toLowerCase();
+
+  let query = supabase.from('produtos').select('*', { count: 'exact' });
+
+  // Apply filters
+  query = query.eq('empresa_id', S.empresa.id);
+
+  if (search) {
+    if (/^\d+$/.test(search)) {
+      query = query.or(`id.eq.${search},nome.ilike.%${search}%`);
+    } else {
+      query = query.ilike('nome', `%${search}%`);
+    }
+  }
+
+  // Add ordering (best sellers first)
+  query = query.order('quantidade_vendida', { ascending: false }).order('nome', { ascending: true });
+
+  // Add pagination range
+  const from = (S.produtosCurrentPage - 1) * S.produtosPageSize;
+  const to = from + S.produtosPageSize - 1;
+  query = query.range(from, to);
+
+  // Fetch
+  const { data, count, error } = await query;
+  if (error) {
+    console.error('Erro ao buscar produtos paginados:', error);
+    return;
+  }
+
+  S.produtosPage = data || [];
+  S.produtosTotalCount = count || 0;
+
+  renderProdutosPage();
 }
 
 async function loadAtendimentos() {
@@ -2146,23 +2283,21 @@ const fmtMoney = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minim
 const fmtDate = s => { if (!s) return '-'; try { return new Date(s).toLocaleDateString('pt-BR') } catch (e) { return s } }
 const initials = n => { if (!n) return '?'; const p = n.trim().split(' '); return (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() }
 
-function renderClientes() {
-  const search = document.getElementById('cli-search').value.toLowerCase()
-  const filter = document.getElementById('cli-filter').value
-  const list = S.clientes.filter(c => {
-    if (search && !(c.nome || '').toLowerCase().includes(search) && !(c.cnpj || '').includes(search) && !(c.cidade || '').toLowerCase().includes(search)) return false
-    if (filter === 'inactive') return c.dias_sem_compra > 15
-    if (filter === 'hot') return c.segmento === 'hot'
-    if (filter === 'warm') return c.segmento === 'warm'
-    if (filter === 'cold') return c.segmento === 'cold'
-    return true
-  })
-  const inat = S.clientes.filter(c => c.dias_sem_compra > 15).length
-  const badge = document.getElementById('badge-inat'); badge.style.display = inat > 0 ? '' : 'none'; badge.textContent = inat
-  const tb = document.getElementById('cli-tbody')
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhum cliente</p></div></td></tr>'; return }
-  tb.innerHTML = list.slice(0, 100).map(c => {
-    const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low'
+function renderClientesPage() {
+  const tb = document.getElementById('cli-tbody');
+  if (!tb) return;
+
+  if (!S.clientesPage.length) {
+    tb.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>Nenhum cliente</p></div></td></tr>';
+    document.getElementById('cli-pagination-info').textContent = 'Mostrando 0-0 de 0';
+    document.getElementById('cli-page-prev').disabled = true;
+    document.getElementById('cli-page-next').disabled = true;
+    document.getElementById('cli-page-current').textContent = 'Página 1';
+    return;
+  }
+
+  tb.innerHTML = S.clientesPage.map(c => {
+    const cl = c.segmento === 'hot' ? 'score-fill high' : c.segmento === 'warm' ? 'score-fill med' : 'score-fill low';
     return `<tr class="clickable-row" onclick="window.openCustomerModal(${c.id})">
       <td><div style="font-weight:500">${c.nome || '-'}</div><div style="font-size:11px;color:var(--text-secondary)">${c.cidade || ''}</div></td>
       <td style="font-size:12px">${c.cnpj || '-'}</td>
@@ -2170,8 +2305,20 @@ function renderClientes() {
       <td><div class="score-bar"><div class="${cl}" style="width:${c.score || 0}%"></div></div> ${c.score || 0}</td>
       <td><span class="badge ${c.segmento === 'hot' ? 'badge-danger' : c.segmento === 'warm' ? 'badge-warning' : 'badge-info'}">${c.segmento === 'hot' ? 'Hot' : c.segmento === 'warm' ? 'Warm' : 'Cold'}</span></td>
       <td style="font-size:12px">${c.dias_sem_compra !== null ? c.dias_sem_compra + ' dias' : '-'}</td>
-    </tr>`
-  }).join('')
+    </tr>`;
+  }).join('');
+
+  // Update pagination controls
+  const totalCount = S.clientesTotalCount;
+  const startIdx = (S.clientesCurrentPage - 1) * S.clientesPageSize + 1;
+  const endIdx = Math.min(startIdx + S.clientesPage.length - 1, totalCount);
+
+  document.getElementById('cli-pagination-info').textContent = `Mostrando ${startIdx}-${endIdx} de ${totalCount}`;
+  document.getElementById('cli-page-current').textContent = `Página ${S.clientesCurrentPage}`;
+
+  // Enable/disable buttons
+  document.getElementById('cli-page-prev').disabled = S.clientesCurrentPage <= 1;
+  document.getElementById('cli-page-next').disabled = endIdx >= totalCount;
 }
 
 function renderPedidosPage() {
@@ -2219,12 +2366,20 @@ function renderPedidosPage() {
   document.getElementById('ped-page-next').disabled = endIdx >= totalCount;
 }
 
-function renderProdutos() {
-  const search = document.getElementById('prod-search').value.toLowerCase()
-  const list = S.produtos.filter(p => !search || (p.nome || '').toLowerCase().includes(search) || String(p.id).includes(search))
-  const tb = document.getElementById('prod-tbody')
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Sem produtos</p></div></td></tr>'; return }
-  tb.innerHTML = list.slice(0, 100).map(p => 
+function renderProdutosPage() {
+  const tb = document.getElementById('prod-tbody');
+  if (!tb) return;
+
+  if (!S.produtosPage.length) {
+    tb.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Sem produtos</p></div></td></tr>';
+    document.getElementById('prod-pagination-info').textContent = 'Mostrando 0-0 de 0';
+    document.getElementById('prod-page-prev').disabled = true;
+    document.getElementById('prod-page-next').disabled = true;
+    document.getElementById('prod-page-current').textContent = 'Página 1';
+    return;
+  }
+
+  tb.innerHTML = S.produtosPage.map(p => 
     `<tr>
       <td style="font-size:12px">${p.id}</td>
       <td><div style="font-weight:500;font-size:13px">${p.nome || '-'}</div></td>
@@ -2235,7 +2390,19 @@ function renderProdutos() {
       <td style="font-size:12px">${p.marca_nome || p.fornecedor || '-'}</td>
       <td>${p.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
     </tr>`
-  ).join('')
+  ).join('');
+
+  // Update pagination controls
+  const totalCount = S.produtosTotalCount;
+  const startIdx = (S.produtosCurrentPage - 1) * S.produtosPageSize + 1;
+  const endIdx = Math.min(startIdx + S.produtosPage.length - 1, totalCount);
+
+  document.getElementById('prod-pagination-info').textContent = `Mostrando ${startIdx}-${endIdx} de ${totalCount}`;
+  document.getElementById('prod-page-current').textContent = `Página ${S.produtosCurrentPage}`;
+
+  // Enable/disable buttons
+  document.getElementById('prod-page-prev').disabled = S.produtosCurrentPage <= 1;
+  document.getElementById('prod-page-next').disabled = endIdx >= totalCount;
 }
 
 function renderAtendimentos() {
@@ -3246,8 +3413,42 @@ document.getElementById('btn-logout').addEventListener('click', doLogout)
 document.getElementById('btn-save-config').addEventListener('click', saveWinthorConfig)
 document.getElementById('link-register').addEventListener('click', (e) => { e.preventDefault(); showRegister() })
 document.getElementById('link-login').addEventListener('click', (e) => { e.preventDefault(); showLogin() })
-document.getElementById('cli-search').addEventListener('input', renderClientes)
-document.getElementById('cli-filter').addEventListener('change', renderClientes)
+// Clientes Pagination and Filters
+const reloadClientes = () => {
+  S.clientesCurrentPage = 1;
+  loadClientesPage();
+};
+
+let cliSearchTimeout;
+document.getElementById('cli-search').addEventListener('input', () => {
+  clearTimeout(cliSearchTimeout);
+  cliSearchTimeout = setTimeout(reloadClientes, 300);
+});
+
+document.getElementById('cli-filter').addEventListener('change', reloadClientes);
+
+document.getElementById('cli-page-size').addEventListener('change', function() {
+  S.clientesPageSize = parseInt(this.value, 10) || 25;
+  reloadClientes();
+});
+
+document.getElementById('cli-page-prev').addEventListener('click', () => {
+  if (S.clientesCurrentPage > 1) {
+    S.clientesCurrentPage--;
+    loadClientesPage();
+  }
+});
+
+document.getElementById('cli-page-next').addEventListener('click', () => {
+  const startIdx = (S.clientesCurrentPage - 1) * S.clientesPageSize + 1;
+  const endIdx = startIdx + S.clientesPage.length - 1;
+  if (endIdx < S.clientesTotalCount) {
+    S.clientesCurrentPage++;
+    loadClientesPage();
+  }
+});
+
+// Pedidos Pagination
 const reloadPedidos = () => {
   S.pedidosCurrentPage = 1;
   loadPedidosPage();
@@ -3285,7 +3486,39 @@ document.getElementById('ped-page-next').addEventListener('click', () => {
     loadPedidosPage();
   }
 });
-document.getElementById('prod-search').addEventListener('input', renderProdutos)
+
+// Products Pagination and Filters
+const reloadProdutos = () => {
+  S.produtosCurrentPage = 1;
+  loadProdutosPage();
+};
+
+let prodSearchTimeout;
+document.getElementById('prod-search').addEventListener('input', () => {
+  clearTimeout(prodSearchTimeout);
+  prodSearchTimeout = setTimeout(reloadProdutos, 300);
+});
+
+document.getElementById('prod-page-size').addEventListener('change', function() {
+  S.produtosPageSize = parseInt(this.value, 10) || 25;
+  reloadProdutos();
+});
+
+document.getElementById('prod-page-prev').addEventListener('click', () => {
+  if (S.produtosCurrentPage > 1) {
+    S.produtosCurrentPage--;
+    loadProdutosPage();
+  }
+});
+
+document.getElementById('prod-page-next').addEventListener('click', () => {
+  const startIdx = (S.produtosCurrentPage - 1) * S.produtosPageSize + 1;
+  const endIdx = startIdx + S.produtosPage.length - 1;
+  if (endIdx < S.produtosTotalCount) {
+    S.produtosCurrentPage++;
+    loadProdutosPage();
+  }
+});
 document.getElementById('btn-filter-dash').addEventListener('click', loadDashboard)
 document.getElementById('btn-close-cust-modal').addEventListener('click', () => { document.getElementById('customer-modal').style.display = 'none'; })
 document.getElementById('btn-close-order-modal').addEventListener('click', () => { document.getElementById('order-modal').style.display = 'none'; })
