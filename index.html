@@ -1205,12 +1205,49 @@ tr:hover td {
 
 <!-- PRODUTOS -->
 <div class="page" id="page-produtos">
-  <div class="search-bar">
-    <input type="text" id="prod-search" placeholder="Nome ou codigo...">
+  <div class="search-bar" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:20px">
+    <input type="text" id="prod-search" placeholder="Nome ou código..." style="flex:1; min-width:200px">
+    
+    <select id="prod-brand" style="width:180px; flex:none">
+      <option value="">Marca: Todas</option>
+    </select>
+    
+    <select id="prod-dept" style="width:180px; flex:none">
+      <option value="">Departamento: Todos</option>
+    </select>
+    
+    <select id="prod-section" style="width:180px; flex:none">
+      <option value="">Seção: Todas</option>
+    </select>
+    
+    <select id="prod-category" style="width:180px; flex:none">
+      <option value="">Categoria: Todas</option>
+    </select>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
-    <table><thead><tr><th>Cod.</th><th>Nome</th><th>Preço</th><th>Categoria</th><th>Seção</th><th>Departamento</th><th>Marca</th><th>Status</th></tr></thead>
-    <tbody id="prod-tbody"><tr><td colspan="8"><div class="empty-state"><i class="ti ti-package"></i><p>Carregando...</p></div></td></tr></tbody></table>
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nome</th>
+          <th>Marca</th>
+          <th>Departamento</th>
+          <th>Seção</th>
+          <th>Categoria</th>
+          <th>Preço</th>
+        </tr>
+      </thead>
+      <tbody id="prod-tbody">
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="ti ti-package"></i>
+              <p>Carregando...</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
     <!-- Controle de Paginação de Produtos -->
     <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; padding:12px 24px; border-top:1px solid var(--border-color); background:var(--bg-secondary); flex-wrap:wrap; gap:12px">
       <div style="display:flex; align-items:center; gap:8px">
@@ -1783,7 +1820,7 @@ function showPage(id) {
   if (id === 'dashboard') loadDashboard()
   if (id === 'clientes') loadClientesPage()
   if (id === 'pedidos') loadPedidosPage()
-  if (id === 'produtos') loadProdutosPage()
+  if (id === 'produtos') { loadProductFilterOptions(); loadProdutosPage(); }
   if (id === 'predicoes') { loadPredictionsTab(); renderTopSellingProducts(); }
 }
 
@@ -1978,10 +2015,53 @@ async function loadProdutos() {
   S.produtos = data || []
 }
 
+async function loadProductFilterOptions() {
+  if (!S.empresa) return;
+  try {
+    const { data, error } = await supabase.rpc('get_product_filters', { p_empresa_id: S.empresa.id });
+    if (error) {
+      console.error('Erro RPC ao buscar filtros de produtos:', error);
+      return;
+    }
+
+    if (data) {
+      const brandSelect = document.getElementById('prod-brand');
+      if (brandSelect) {
+        brandSelect.innerHTML = '<option value="">Marca: Todas</option>' + 
+          (data.marcas || []).map(b => `<option value="${b}">${b}</option>`).join('');
+      }
+
+      const deptSelect = document.getElementById('prod-dept');
+      if (deptSelect) {
+        deptSelect.innerHTML = '<option value="">Departamento: Todos</option>' + 
+          (data.departamentos || []).map(d => `<option value="${d}">${d}</option>`).join('');
+      }
+
+      const secSelect = document.getElementById('prod-section');
+      if (secSelect) {
+        secSelect.innerHTML = '<option value="">Seção: Todas</option>' + 
+          (data.secoes || []).map(s => `<option value="${s}">${s}</option>`).join('');
+      }
+
+      const catSelect = document.getElementById('prod-category');
+      if (catSelect) {
+        catSelect.innerHTML = '<option value="">Categoria: Todas</option>' + 
+          (data.categorias || []).map(c => `<option value="${c}">${c}</option>`).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao carregar opções de filtro de produtos:', err);
+  }
+}
+
 async function loadProdutosPage() {
   if (!S.empresa) return;
 
   const search = document.getElementById('prod-search').value.trim().toLowerCase();
+  const brand = document.getElementById('prod-brand').value;
+  const dept = document.getElementById('prod-dept').value;
+  const section = document.getElementById('prod-section').value;
+  const category = document.getElementById('prod-category').value;
 
   let query = supabase.from('produtos').select('*', { count: 'exact' });
 
@@ -1994,6 +2074,22 @@ async function loadProdutosPage() {
     } else {
       query = query.ilike('nome', `%${search}%`);
     }
+  }
+
+  if (brand) {
+    query = query.eq('marca_nome', brand);
+  }
+
+  if (dept) {
+    query = query.eq('departamento_nome', dept);
+  }
+
+  if (section) {
+    query = query.eq('secao_nome', section);
+  }
+
+  if (category) {
+    query = query.eq('categoria_nome', category);
   }
 
   // Add ordering (best sellers first)
@@ -2365,7 +2461,7 @@ function renderProdutosPage() {
   if (!tb) return;
 
   if (!S.produtosPage.length) {
-    tb.innerHTML = '<tr><td colspan="8"><div class="empty-state"><p>Sem produtos</p></div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Sem produtos</p></div></td></tr>';
     document.getElementById('prod-pagination-info').textContent = 'Mostrando 0-0 de 0';
     document.getElementById('prod-page-prev').disabled = true;
     document.getElementById('prod-page-next').disabled = true;
@@ -2377,12 +2473,11 @@ function renderProdutosPage() {
     `<tr>
       <td style="font-size:12px">${p.id}</td>
       <td><div style="font-weight:500;font-size:13px">${p.nome || '-'}</div></td>
-      <td style="font-size:12px">${fmtMoney(p.preco)}</td>
-      <td style="font-size:12px">${p.categoria_nome || '-'}</td>
-      <td style="font-size:12px">${p.secao_nome || p.secao || '-'}</td>
-      <td style="font-size:12px">${p.departamento_nome || '-'}</td>
       <td style="font-size:12px">${p.marca_nome || p.fornecedor || '-'}</td>
-      <td>${p.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
+      <td style="font-size:12px">${p.departamento_nome || '-'}</td>
+      <td style="font-size:12px">${p.secao_nome || p.secao || '-'}</td>
+      <td style="font-size:12px">${p.categoria_nome || '-'}</td>
+      <td style="font-size:12px; font-weight:600; color:var(--text-primary)">${fmtMoney(p.preco)}</td>
     </tr>`
   ).join('');
 
@@ -3491,6 +3586,11 @@ document.getElementById('prod-search').addEventListener('input', () => {
   clearTimeout(prodSearchTimeout);
   prodSearchTimeout = setTimeout(reloadProdutos, 300);
 });
+
+document.getElementById('prod-brand').addEventListener('change', reloadProdutos);
+document.getElementById('prod-dept').addEventListener('change', reloadProdutos);
+document.getElementById('prod-section').addEventListener('change', reloadProdutos);
+document.getElementById('prod-category').addEventListener('change', reloadProdutos);
 
 document.getElementById('prod-page-size').addEventListener('change', function() {
   S.produtosPageSize = parseInt(this.value, 10) || 25;
