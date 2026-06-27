@@ -2633,11 +2633,7 @@ function initRcaFilter() {
   // Group RCAS by supervisorId
   const grouped = {};
   for (const [id, info] of Object.entries(RCAS)) {
-    const supId = info.supervisorId;
-    if (!grouped[supId]) {
-      grouped[supId] = [];
-    }
-    grouped[supId].push({ id, ...info });
+    (grouped[info.supervisorId] ??= []).push({ id, ...info });
   }
   
   // 1. Populate Supervisor dropdown options
@@ -2734,13 +2730,13 @@ function initRcaFilter() {
       const supId = e.target.getAttribute('data-supervisor');
       
       // Check if all RCAs under this supervisor are checked
-      const rcasOfSup = Array.from(rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]`));
-      const checkedCount = rcasOfSup.filter(cb => cb.checked).length;
+      const totalCount = rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]`).length;
+      const checkedCount = rcaContainer.querySelectorAll(`.rca-checkbox[data-supervisor="${supId}"]:checked`).length;
       
       // Update supervisor checkbox
       const supCb = supContainer.querySelector(`.supervisor-checkbox[value="${supId}"]`);
       if (supCb) {
-        if (checkedCount === rcasOfSup.length) {
+        if (checkedCount === totalCount) {
           supCb.checked = true;
           supCb.indeterminate = false;
         } else if (checkedCount === 0) {
@@ -2825,11 +2821,10 @@ function updateSupervisorBtnText() {
   const container = document.getElementById('supervisor-options-container');
   const btn = document.getElementById('supervisor-select-btn');
   if (!container || !btn) return;
-  const checkboxes = container.querySelectorAll('.supervisor-checkbox');
-  const active = Array.from(checkboxes).filter(cb => cb.checked || cb.indeterminate);
-  const allFullyChecked = Array.from(checkboxes).every(cb => cb.checked);
+  const active = container.querySelectorAll('.supervisor-checkbox:checked, .supervisor-checkbox:indeterminate');
+  const allFullyChecked = container.querySelectorAll('.supervisor-checkbox').length > 0 && container.querySelectorAll('.supervisor-checkbox:not(:checked)').length === 0;
   
-  if (allFullyChecked && checkboxes.length > 0) {
+  if (allFullyChecked) {
     btn.textContent = 'Supervisor: Todos';
   } else if (active.length === 0) {
     btn.textContent = 'Supervisor: Nenhum';
@@ -2846,9 +2841,9 @@ function updateRcaBtnText() {
   const container = document.getElementById('rca-options-container');
   const btn = document.getElementById('rca-select-btn');
   if (!container || !btn) return;
-  const checkboxes = container.querySelectorAll('.rca-checkbox');
-  const checked = Array.from(checkboxes).filter(cb => cb.checked);
-  if (checked.length === checkboxes.length) {
+  const total = container.querySelectorAll('.rca-checkbox').length;
+  const checked = container.querySelectorAll('.rca-checkbox:checked');
+  if (checked.length === total && total > 0) {
     btn.textContent = 'RCA: Todos';
   } else if (checked.length === 0) {
     btn.textContent = 'RCA: Nenhum';
@@ -2867,12 +2862,7 @@ function applyDatePreset(preset) {
   if (!startInput || !endInput) return;
   
   const today = new Date();
-  const getFmtDate = (d) => {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  };
+  const getFmtDate = d => d.toLocaleDateString('sv');
   
   let start = '';
   let end = '';
