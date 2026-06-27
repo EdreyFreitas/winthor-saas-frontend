@@ -1917,16 +1917,11 @@ async function loadPedidosPage() {
   }
 
   // Construct query
+  let query = supabase.from('pedidos').select('*', { count: 'exact' });
+
   const needRcaFilter = rcaCheckboxes.length > 0 && selectedRcas.length < rcaCheckboxes.length;
-  
-  let query;
   if (needRcaFilter) {
-    query = supabase.from('pedidos')
-      .select('*, clientes!inner(vendedor_id)', { count: 'exact' })
-      .in('clientes.vendedor_id', selectedRcas);
-  } else {
-    query = supabase.from('pedidos')
-      .select('*, clientes(vendedor_id)', { count: 'exact' });
+    query = query.in('vendedor_id', selectedRcas);
   }
 
   // Apply other filters
@@ -2335,8 +2330,7 @@ function renderPedidosPage() {
   }
 
   tb.innerHTML = S.pedidosPage.map(p => {
-    // Resolve vendor / RCA using joined clientes relation if available, otherwise check S.clientes
-    const rcaId = p.clientes ? String(p.clientes.vendedor_id || '') : '';
+    const rcaId = String(p.vendedor_id || '');
     const rca = RCAS[rcaId];
     const rcaDesc = rca ? `[${rcaId}] ${rca.nome}` : (rcaId ? `RCA ${rcaId}` : '-');
     const supervisorDesc = rca ? (SUPERVISORES[rca.supervisorId] || '-') : '-';
@@ -2740,8 +2734,7 @@ async function openOrderModal(orderId) {
     }
   }
   
-  const cliente = S.clientes.find(c => String(c.id) === String(o.cliente_id));
-  const rcaId = cliente ? String(cliente.vendedor_id || '') : '';
+  const rcaId = String(o.vendedor_id || '');
   const rca = RCAS[rcaId];
   const rcaDesc = rca ? `[${rcaId}] ${rca.nome}` : (rcaId ? `RCA ${rcaId}` : '-');
   const supervisorDesc = rca ? (SUPERVISORES[rca.supervisorId] || '-') : '-';

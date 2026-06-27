@@ -607,22 +607,27 @@ async function syncEmpresa(
       const BATCH = 1000
       const promessas = []
       for (let i = 0; i < pedidosRaw.length; i += BATCH) {
-        const lote = pedidosRaw.slice(i, i + BATCH).map((p: any) => ({
-          id: p.orderId,                                          // pcpedc.numped
-          empresa_id: empresa.id,
-          cliente_id: p.customer?.id,                            // pcpedc.codcli (via customer.id)
-          cliente_nome: p.customer?.tradeName || p.customerName,
-          data: p.createData                                      // CORRETO: createData (nao createDate!)
-            ? new Date(p.createData).toISOString().split('T')[0]
-            : null,
-          status: p.orderStatus,                                  // pcpedc.posicao
-          total: parseFloat(String(p.totalValue || 0)),          // pcpedc.vltotal (vem como string "0.0")
-          itens: p.listOfOrderItem || [],
-          transportadora: String(p.carrierId || ''),
-          plano_pagamento: String(p.paymentPlanId || ''),
-          origem: p.saleOrigin || 'W',                            // pcpedc.origemped
-          filial: String(p.branchId || '')
-        })).filter((p: any) => p.id && p.cliente_id)
+        const lote = pedidosRaw.slice(i, i + BATCH).map((p: any) => {
+          const idStr = String(p.orderId);
+          const extractedVendedorId = idStr.length > 6 ? idStr.substring(0, idStr.length - 6) : '';
+          return {
+            id: p.orderId,                                          // pcpedc.numped
+            empresa_id: empresa.id,
+            cliente_id: p.customer?.id,                            // pcpedc.codcli (via customer.id)
+            cliente_nome: p.customer?.tradeName || p.customerName,
+            data: p.createData                                      // CORRETO: createData (nao createDate!)
+              ? new Date(p.createData).toISOString().split('T')[0]
+              : null,
+            status: p.orderStatus,                                  // pcpedc.posicao
+            total: parseFloat(String(p.totalValue || 0)),          // pcpedc.vltotal (vem como string "0.0")
+            itens: p.listOfOrderItem || [],
+            transportadora: String(p.carrierId || ''),
+            plano_pagamento: String(p.paymentPlanId || ''),
+            origem: p.saleOrigin || 'W',                            // pcpedc.origemped
+            filial: String(p.branchId || ''),
+            vendedor_id: p.sellerId || p.salesRepresentativeId || p.vendedorId || extractedVendedorId
+          };
+        }).filter((p: any) => p.id && p.cliente_id)
 
         if (lote.length > 0) {
           promessas.push(
